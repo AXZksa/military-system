@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}تسجيل الحضور{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h5 class="mb-0"><i class="bi bi-geo-alt ms-2"></i>تسجيل الحضور والانصراف</h5>
+            </div>
+            <div class="card-body text-center">
+                <div id="locationStatus" class="mb-3">
+                    <div class="spinner-border text-primary d-none" id="loadingSpinner" role="status">
+                        <span class="visually-hidden">جاري تحديد الموقع...</span>
+                    </div>
+                    <div id="statusMessage" class="alert alert-info">اضغط على أحد الأزرار لتسجيل حضورك أو انصرافك</div>
+                </div>
+                <div id="mapContainer" class="mb-3" style="height:250px;border-radius:8px;overflow:hidden;display:none;">
+                    <div id="map" style="height:100%;"></div>
+                </div>
+                <div class="d-grid gap-3">
+                    <button id="checkInBtn" class="btn btn-success btn-lg" onclick="handleAttendance('check_in')">
+                        <i class="bi bi-check-circle fs-4"></i><br>تسجيل حضور
+                    </button>
+                    <button id="checkOutBtn" class="btn btn-danger btn-lg" onclick="handleAttendance('check_out')">
+                        <i class="bi bi-x-circle fs-4"></i><br>تسجيل انصراف
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        يجب أن تكون داخل الموقع لتسجيل الحضور/الانصراف. يتم تحديد موقعك عبر GPS.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let watchId = null;
+const facilityLat = {{ facility_lat|default(25.8633556) }};
+const facilityLng = {{ facility_lng|default(43.4831471) }};
+const allowedRadius = {{ allowed_radius|default(50) }};
+
+function handleAttendance(action) {
+    const btn = action === 'check_in' ? 'checkInBtn' : 'checkOutBtn';
+    const spinner = document.getElementById('loadingSpinner');
+    const status = document.getElementById('statusMessage');
+
+    document.getElementById(btn).disabled = true;
+    spinner.classList.remove('d-none');
+    status.className = 'alert alert-info';
+    status.textContent = 'جارٍ تحديد موقعك...';
+
+    if (!navigator.geolocation) {
+        status.className = 'alert alert-danger';
+        status.textContent = 'المتصفح لا يدعم تحديد الموقع';
+        document.getElementById(btn).disabled = false;
+        spinner.classList.add('d-none');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            spinner.classList.add('d-none');
+
+            fetch(action === 'check_in' ? '/employee/check-in' : '/employee/check-out', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({latitude: lat, longitude: lng})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    status.className = 'alert alert-success';
+                    status.textContent = data.msg;
+                } else {
+                    status.className = 'alert alert-danger';
+                    status.textContent = data.msg;
+                }
+            })
+            .catch(err => {
+                status.className = 'alert alert-danger';
+                status.textContent = 'خطأ في الاتصال: ' + err.message;
+            })
+            .finally(() => {
+                document.getElementById(btn).disabled = false;
+            });
+        },
+        function(err) {
+            spinner.classList.add('d-none');
+            status.className = 'alert alert-danger';
+            const msgs = {
+                1: 'تم رفض إذن الموقع. الرجاء السماح بالوصول إلى الموقع.',
+                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS.',
+                3: 'انتهت مهلة تحديد الموقع. حاول مرة أخرى.'
+            };
+            status.textContent = msgs[err.code] || 'خطأ في تحديد الموقع: ' + err.message;
+            document.getElementById(btn).disabled = false;
+        },
+        {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
+    );
+}
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}الرئيسية{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-circle fs-1 text-primary"></i>
+                <h4 class="mt-2">{{ user.full_name }}</h4>
+                <p class="text-muted">{{ user.rank_title or 'عسكري' }}</p>
+                <div class="d-flex justify-content-center gap-3 mt-3">
+                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-circle"></i> تسجيل حضور
+                    </a>
+                    <a href="{{ url_for('employee_leave') }}" class="btn btn-info btn-lg">
+                        <i class="bi bi-airplane"></i> رخصتي
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history ms-2"></i>حضور اليوم</h5></div>
+            <div class="card-body">
+                {% if attendance %}
+                {% for act, ts in attendance %}
+                <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                    <span>{% if act == 'check_in' %}🟢 دخول{% else %}🔴 خروج{% endif %}</span>
+                    <span>{{ ts[11:16] }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted mb-0">لم يتم تسجيل حضور اليوم.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-airplane ms-2"></i>الرخصة</h5></div>
+            <div class="card-body">
+                {% if lv %}
+                <p class="text-info">🟢 مرخوص</p>
+                <p>المدة: {{ lv.label }}<br>من: {{ lv.start }}<br>إلى: {{ lv.end }}</p>
+                {% else %}
+                <p class="text-muted">غير مرخوص</p>
+                <a href="{{ url_for('employee_leave') }}" class="btn btn-primary btn-sm">طلب رخصة</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone ms-2"></i>آخر تعميم</h5></div>
+            <div class="card-body">
+                {% if circular %}
+                <p>{{ circular[0] }}</p>
+                <small class="text-muted">{{ circular[1] }}</small>
+                {% else %}
+                <p class="text-muted mb-0">لا يوجد تعميم حالياً.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('employee_report') }}" class="btn btn-outline-danger"><i class="bi bi-exclamation-circle"></i> بلاغ عاجل</a>
+                    <a href="{{ url_for('employee_message_leader') }}" class="btn btn-outline-primary"><i class="bi bi-chat"></i> راسل القائد</a>
+                    <a href="{{ url_for('employee_notifications') }}" class="btn btn-outline-warning position-relative">
+                        <i class="bi bi-bell"></i> الإشعارات
+                        {% if unread %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread }}</span>{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

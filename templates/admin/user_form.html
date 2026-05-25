@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if user %}تعديل{% else %}إضافة{% endif %} عسكري{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{% if user %}<i class="bi bi-pencil ms-2"></i>تعديل بيانات{% else %}<i class="bi bi-person-plus ms-2"></i>إضافة عسكري جديد{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الكامل</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ user.full_name if user else '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الرتبة</label>
+                        <select name="rank_title" class="form-select">
+                            <option value="">— بدون —</option>
+                            {% for r in ['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'] %}
+                            <option value="{{ r }}" {% if user and user.rank_title == r %}selected{% endif %}>{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">اليوزر</label>
+                        <input type="text" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}required{% else %}required{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% if user %}كلمة المرور الجديدة (اتركه فارغاً إذا لا تريد التغيير){% else %}كلمة المرور{% endif %}</label>
+                        <input type="text" name="password" class="form-control" {% if not user %}required{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الجوال</label>
+                        <input type="text" name="phone_number" class="form-control" dir="ltr" value="{{ user.phone_number if user and user.phone_number else '' }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">{% if user %}حفظ التعديلات{% else %}إضافة{% endif %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

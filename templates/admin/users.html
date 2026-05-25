@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}إدارة العساكر{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-people ms-2"></i>بيان القوة <span class="badge bg-primary">{{ soldiers|length }}</span></h5>
+        <div>
+            <a href="{{ url_for('admin_add_user') }}" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> إضافة</a>
+            <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i> استعلام</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for sid, nm, un, blk, rank, phone in soldiers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ rank or '—' }}</td>
+                        <td>{{ nm }}</td>
+                        <td><code>{{ un }}</code></td>
+                        <td dir="ltr">{{ phone or '—' }}</td>
+                        <td>
+                            {% if blk %}<span class="badge bg-danger">موقوف</span>
+                            {% else %}<span class="badge bg-success">نشط</span>{% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                            <form method="POST" action="{{ url_for('admin_toggle_block', uid=sid) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm {% if blk %}btn-success{% else %}btn-secondary{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
+                                    <i class="bi {% if blk %}bi-unlock{% else %}bi-lock{% endif %}"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_delete_user', uid=sid) }}" class="d-inline" onsubmit="return confirm('تأكيد حذف {{ nm }}؟')">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="searchModal">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('admin_search_user') }}">
+            <div class="modal-content">
+                <div class="modal-header"><h5>استعلام عن عسكري</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" name="query" class="form-control form-control-lg" placeholder="أدخل اليوزر" required autofocus>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">بحث</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
