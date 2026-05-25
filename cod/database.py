@@ -1,0 +1,318 @@
+import os, sqlite3, datetime, uuid
+import bcrypt
+
+DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'military.db')
+
+def ksa():
+    return datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+
+def ksa_str():
+    return ksa().strftime('%Y-%m-%d %H:%M:%S')
+
+RANKS_ORDER = ['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول',
+    'رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم',
+    'عقيد','عميد','لواء','فريق','فريق أول']
+
+def rank_index(r):
+    r = (r or '').strip()
+    try: return RANKS_ORDER.index(r)
+    except: return -1
+
+def db_get(q, p=()):
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.execute(q, p); rows = c.fetchall(); conn.close(); return rows
+
+def db_run(q, p=()):
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.execute(q, p); conn.commit(); n = c.rowcount; conn.close(); return n
+
+def init_db():
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT UNIQUE NOT NULL,
+            password    TEXT NOT NULL,
+            full_name   TEXT NOT NULL,
+            role        TEXT DEFAULT 'employee',
+            chat_id     INTEGER,
+            device_uid  TEXT,
+            is_blocked  INTEGER DEFAULT 0,
+            phone_number TEXT DEFAULT NULL,
+            rank_title  TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS attendance (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id   INTEGER NOT NULL,
+            action    TEXT NOT NULL,
+            latitude  REAL,
+            longitude REAL,
+            timestamp TEXT NOT NULL,
+            note      TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS leaves (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id        INTEGER UNIQUE NOT NULL,
+            start_time     TEXT,
+            end_time       TEXT,
+            duration_label TEXT
+        );
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id        INTEGER NOT NULL,
+            duration_label TEXT,
+            hours_duration INTEGER,
+            request_date   TEXT,
+            status         TEXT DEFAULT 'PENDING'
+        );
+        CREATE TABLE IF NOT EXISTS notifications (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL,
+            content    TEXT NOT NULL,
+            is_read    INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS shifts (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            shift_date  TEXT NOT NULL,
+            current_duty TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS urgent_reports (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id   INTEGER NOT NULL,
+            report_text TEXT NOT NULL,
+            reply_text  TEXT,
+            created_at  TEXT NOT NULL,
+            status      TEXT DEFAULT 'OPEN'
+        );
+        CREATE TABLE IF NOT EXISTS circulars (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            content    TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS history_records (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL,
+            note       TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS security_alerts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER,
+            alert_type TEXT NOT NULL,
+            detail     TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS shifts_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, shift_date TEXT, current_duty TEXT,
+            username TEXT DEFAULT '', created_at TEXT);
+    ''')
+    conn.commit(); conn.close()
+
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def check_password(stored, password):
+    if stored.startswith('$2'):
+        try: return bcrypt.checkpw(password.encode('utf-8'), stored.encode('utf-8'))
+        except: return False
+    return stored == password
+
+def get_user(username):
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE LOWER(TRIM(username))=?",
+               (username.strip().lower(),))
+    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
+    return None
+
+def get_user_by_id(uid):
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE id=?", (uid,))
+    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
+    return None
+
+def get_soldiers():
+    rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee'")
+    return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
+
+def add_user(u, p, n, role='employee', rank='', phone=''):
+    try:
+        pw = hash_password(p)
+        db_run("INSERT INTO users (username,password,full_name,role,rank_title,phone_number) VALUES (?,?,?,?,?,?)",
+               (u.strip().lower(), pw, n.strip(), role, rank.strip(), phone.strip()))
+        return True, "تمت الإضافة بنجاح"
+    except sqlite3.IntegrityError:
+        return False, "يوزر موجود مسبقاً"
+    except Exception as e:
+        return False, str(e)
+
+def update_user(uid, field, value):
+    if field in ('username','password','full_name','rank_title','phone_number'):
+        if field == 'password':
+            value = hash_password(value)
+        elif field == 'username':
+            try:
+                db_run("UPDATE users SET username=? WHERE id=?", (value.strip().lower(), uid))
+                return True
+            except: return False
+        db_run(f"UPDATE users SET {field}=? WHERE id=?", (value.strip() if isinstance(value, str) else value, uid))
+        return True
+    return False
+
+def delete_user(uid):
+    db_run("DELETE FROM users WHERE id=?", (uid,))
+
+def toggle_block(uid):
+    u = get_user_by_id(uid)
+    if not u: return None
+    new = 0 if u['is_blocked'] else 1
+    db_run("UPDATE users SET is_blocked=? WHERE id=?", (new, uid))
+    return new
+
+def set_device_uid(uid, device_id):
+    db_run("UPDATE users SET device_uid=? WHERE id=?", (device_id, uid))
+
+# Attendance
+def record_attendance(user_id, action, lat, lng, note=''):
+    db_run("INSERT INTO attendance (user_id,action,latitude,longitude,timestamp,note) VALUES (?,?,?,?,?,?)",
+           (user_id, action, lat, lng, ksa_str(), note))
+
+def get_report(date_str):
+    rows = db_get("SELECT user_id,action,timestamp,note FROM attendance WHERE DATE(timestamp)=?", (date_str,))
+    amap = {}
+    for uid,action,ts,note in rows:
+        if uid not in amap: amap[uid] = {'check_in':None,'check_out':None,'note':''}
+        t = ts.split(' ')[1][:5]
+        if action=='check_in' and not amap[uid]['check_in']:
+            amap[uid]['check_in'] = t; amap[uid]['note'] = note or ''
+        elif action=='check_out':
+            amap[uid]['check_out'] = t
+    return amap
+
+def get_dates():
+    return [r[0] for r in db_get("SELECT DISTINCT DATE(timestamp) FROM attendance ORDER BY DATE(timestamp) DESC LIMIT 30")]
+
+# Leaves
+def get_leave(user_id):
+    r = db_get("SELECT start_time,end_time,duration_label FROM leaves WHERE user_id=?", (user_id,))
+    if r:
+        if ksa() > datetime.datetime.strptime(r[0][1], '%Y-%m-%d %H:%M'):
+            db_run("DELETE FROM leaves WHERE user_id=?", (user_id,)); return None
+        return {'start':r[0][0],'end':r[0][1],'label':r[0][2]}
+    return None
+
+def get_active_leaves():
+    rows = db_get("SELECT l.user_id,u.full_name,u.chat_id,l.end_time,l.duration_label FROM leaves l JOIN users u ON l.user_id=u.id")
+    now  = ksa()
+    return [r for r in rows if r[3] and now <= datetime.datetime.strptime(r[3],'%Y-%m-%d %H:%M')]
+
+def set_leave(user_id, hours):
+    std = ksa(); etd = std + datetime.timedelta(hours=hours)
+    db_run("DELETE FROM leaves WHERE user_id=?", (user_id,))
+    db_run("INSERT INTO leaves (user_id,start_time,end_time,duration_label) VALUES (?,?,?,?)",
+           (user_id, std.strftime('%Y-%m-%d %H:%M'), etd.strftime('%Y-%m-%d %H:%M'), f"{hours} ساعة"))
+    return std, etd
+
+def revoke_leave(user_id):
+    db_run("DELETE FROM leaves WHERE user_id=?", (user_id,))
+
+def request_leave(user_id, hours):
+    db_run("INSERT INTO leave_requests (user_id,duration_label,hours_duration,request_date) VALUES (?,?,?,?)",
+           (user_id, f"{hours} ساعة", hours, ksa().strftime('%Y-%m-%d %H:%M')))
+
+def get_pending_requests():
+    return db_get("SELECT id,user_id,duration_label,hours_duration,request_date,status FROM leave_requests WHERE status='PENDING' ORDER BY id DESC")
+
+def approve_leave_request(req_id):
+    row = db_get("SELECT user_id, hours_duration FROM leave_requests WHERE id=?", (req_id,))
+    if not row: return None
+    uid, hours = row[0]
+    db_run("UPDATE leave_requests SET status='APPROVED' WHERE id=?", (req_id,))
+    set_leave(uid, hours)
+    return uid, hours
+
+def reject_leave_request(req_id):
+    row = db_get("SELECT user_id FROM leave_requests WHERE id=?", (req_id,))
+    if not row: return None
+    db_run("UPDATE leave_requests SET status='REJECTED' WHERE id=?", (req_id,))
+    return row[0][0]
+
+# Notifications
+def push_notif(user_id, content):
+    db_run("INSERT INTO notifications (user_id,content,created_at) VALUES (?,?,?)",
+           (user_id, content, ksa().strftime('%Y-%m-%d %H:%M')))
+
+def get_unread(user_id):
+    return db_get("SELECT id,content,created_at FROM notifications WHERE user_id=? AND is_read=0 ORDER BY id", (user_id,))
+
+def mark_read(user_id):
+    db_run("UPDATE notifications SET is_read=1 WHERE user_id=?", (user_id,))
+
+def get_all_notifications(user_id):
+    return db_get("SELECT id,content,created_at,is_read FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 50", (user_id,))
+
+# Shifts
+def get_today_shifts():
+    dt = ksa().strftime('%Y-%m-%d')
+    return db_get("SELECT id,current_duty FROM shifts WHERE shift_date=? ORDER BY id", (dt,))
+
+def set_shift(duty):
+    dt = ksa().strftime('%Y-%m-%d')
+    ts = ksa_str()
+    db_run("INSERT INTO shifts (shift_date,current_duty) VALUES (?,?)", (dt, duty))
+    rows = db_get("SELECT username FROM users WHERE full_name=?", (duty.split(' / ')[-1],))
+    uname = rows[0][0] if rows else ''
+    db_run("INSERT INTO shifts_archive (shift_date,current_duty,username,created_at) VALUES (?,?,?,?)",
+           (dt, duty, uname, ts))
+
+def delete_shift(sid):
+    db_run("DELETE FROM shifts WHERE id=?", (sid,))
+
+def get_shift_archive():
+    return db_get("SELECT shift_date,current_duty,username,created_at FROM shifts_archive ORDER BY id DESC LIMIT 50")
+
+# Security
+def get_security_alerts(limit=20):
+    return db_get("SELECT sa.created_at,u.full_name,sa.alert_type,sa.detail FROM security_alerts sa LEFT JOIN users u ON sa.user_id=u.id ORDER BY sa.id DESC LIMIT ?", (limit,))
+
+def add_security_alert(user_id, alert_type, detail):
+    db_run("INSERT INTO security_alerts (user_id,alert_type,detail,created_at) VALUES (?,?,?,?)",
+           (user_id, alert_type, detail, ksa_str()))
+
+def get_history_records(user_id=None):
+    if user_id:
+        return db_get("SELECT id,note,created_at FROM history_records WHERE user_id=? ORDER BY id DESC", (user_id,))
+    return db_get("SELECT hr.id,u.full_name,hr.note,hr.created_at FROM history_records hr JOIN users u ON hr.user_id=u.id ORDER BY hr.id DESC LIMIT 30")
+
+def add_history(user_id, note):
+    db_run("INSERT INTO history_records (user_id,note,created_at) VALUES (?,?,?)",
+           (user_id, note, ksa().strftime('%Y-%m-%d %H:%M')))
+
+def delete_history(hid):
+    db_run("DELETE FROM history_records WHERE id=?", (hid,))
+
+# Circulars
+def get_circular():
+    r = db_get("SELECT content,created_at FROM circulars ORDER BY id DESC LIMIT 1")
+    return r[0] if r else None
+
+def set_circular(content):
+    db_run("INSERT INTO circulars (content,created_at) VALUES (?,?)", (content, ksa().strftime('%Y-%m-%d %H:%M')))
+
+# Reports
+def get_open_reports():
+    return db_get("SELECT id,sender_id,report_text,created_at FROM urgent_reports WHERE status='OPEN' ORDER BY id DESC")
+
+def send_report(sender_id, text):
+    db_run("INSERT INTO urgent_reports (sender_id,report_text,created_at) VALUES (?,?,?)",
+           (sender_id, text, ksa().strftime('%Y-%m-%d %H:%M')))
+
+def reply_report(rep_id, reply_text):
+    db_run("UPDATE urgent_reports SET reply_text=?,status='RESOLVED' WHERE id=?", (reply_text, rep_id))
+    rows = db_get("SELECT sender_id FROM urgent_reports WHERE id=?", (rep_id,))
+    return rows[0][0] if rows else None
+
+# Get employee chat IDs for broadcast
+def get_employee_chat_ids():
+    return db_get("SELECT chat_id FROM users WHERE role='employee' AND chat_id IS NOT NULL AND is_blocked=0")
+
+def get_admin_ids():
+    return db_get("SELECT id FROM users WHERE role='admin'")

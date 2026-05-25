@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}رخصتي{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-airplane ms-2"></i>حالة الرخصة</h5></div>
+            <div class="card-body">
+                {% if lv %}
+                <div class="alert alert-info">
+                    <p class="mb-1"><strong>الحالة:</strong> 🟢 مرخوص</p>
+                    <p class="mb-1"><strong>المدة:</strong> {{ lv.label }}</p>
+                    <p class="mb-1"><strong>من:</strong> {{ lv.start }}</p>
+                    <p class="mb-0"><strong>إلى:</strong> {{ lv.end }}</p>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary">
+                    <p class="mb-0">غير مرخوص حالياً.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-send ms-2"></i>طلب رخصة</h5></div>
+            <div class="card-body">
+                {% if lv %}
+                <div class="alert alert-warning">لديك رخصة نشطة. لا يمكن طلب رخصة جديدة.</div>
+                {% else %}
+                <form method="POST" action="{{ url_for('employee_request_leave') }}">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <div class="d-grid gap-3">
+                        <button name="hours" value="24" class="btn btn-outline-primary btn-lg">طلب رخصة 24 ساعة</button>
+                        <button name="hours" value="48" class="btn btn-outline-primary btn-lg">طلب رخصة 48 ساعة</button>
+                        <button name="hours" value="72" class="btn btn-outline-primary btn-lg">طلب رخصة 72 ساعة</button>
+                    </div>
+                    <p class="text-muted mt-3 mb-0 small">بعد تقديم الطلب، ينتظر موافقة القائد.</p>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history ms-2"></i>آخر الطلبات</h5></div>
+    <div class="card-body">
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>المدة</th><th>التاريخ</th><th>الحالة</th></tr></thead>
+                <tbody>
+                    {% for label, date, status in requests %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        <td>{{ date }}</td>
+                        <td>
+                            <span class="badge {% if status=='APPROVED' %}bg-success{% elif status=='REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ {'PENDING':'معلق','APPROVED':'معتمد','REJECTED':'مرفوض'}.get(status, status) }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<p class="text-muted mb-0">لا توجد طلبات سابقة.</p>{% endif %}
+    </div>
+</div>
+{% endblock %}
