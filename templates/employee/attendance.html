@@ -1,37 +1,34 @@
 {% extends "base.html" %}
 {% block title %}تسجيل الحضور{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-geo-alt ms-2"></i>تسجيل الحضور والانصراف</h4>
-
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <div class="card">
-            <div class="card-header text-center"><span><i class="bi bi-geo-alt ms-2"></i>تحديد الموقع الجغرافي</span></div>
+            <div class="card-header text-center">
+                <h5 class="mb-0"><i class="bi bi-geo-alt ms-2"></i>تسجيل الحضور والانصراف</h5>
+            </div>
             <div class="card-body text-center">
                 <div id="locationStatus" class="mb-3">
-                    <div id="statusMessage" class="alert alert-info d-flex align-items-center gap-2 py-2">
-                        <i class="bi bi-info-circle"></i>
-                        <span>اضغط على أحد الأزرار لتسجيل حضورك</span>
+                    <div class="spinner-border text-primary d-none" id="loadingSpinner" role="status">
+                        <span class="visually-hidden">جاري تحديد الموقع...</span>
                     </div>
+                    <div id="statusMessage" class="alert alert-info">اضغط على أحد الأزرار لتسجيل حضورك أو انصرافك</div>
                 </div>
-                <div id="loadingSpinner" class="d-none mb-3">
-                    <div class="spinner-border" style="color:var(--accent-green);" role="status"></div>
-                    <p class="mt-2 text-muted">جارٍ تحديد موقعك عبر GPS...</p>
+                <div id="mapContainer" class="mb-3" style="height:250px;border-radius:8px;overflow:hidden;display:none;">
+                    <div id="map" style="height:100%;"></div>
                 </div>
                 <div class="d-grid gap-3">
-                    <button id="checkInBtn" class="btn btn-success btn-checkin" onclick="handleAttendance('check_in')">
-                        <i class="bi bi-box-arrow-in-right fs-4 d-block mb-1"></i>
-                        تسجيل دخول
+                    <button id="checkInBtn" class="btn btn-success btn-lg" onclick="handleAttendance('check_in')">
+                        <i class="bi bi-check-circle fs-4"></i><br>تسجيل حضور
                     </button>
-                    <button id="checkOutBtn" class="btn btn-danger btn-checkin" onclick="handleAttendance('check_out')">
-                        <i class="bi bi-box-arrow-left fs-4 d-block mb-1"></i>
-                        تسجيل خروج
+                    <button id="checkOutBtn" class="btn btn-danger btn-lg" onclick="handleAttendance('check_out')">
+                        <i class="bi bi-x-circle fs-4"></i><br>تسجيل انصراف
                     </button>
                 </div>
-                <div class="mt-3 p-3 rounded-3" style="background:var(--bg-tertiary);">
-                    <small class="text-muted d-flex align-items-center gap-2">
+                <div class="mt-3">
+                    <small class="text-muted">
                         <i class="bi bi-info-circle"></i>
-                        يجب أن تكون داخل الموقع لتسجيل الحضور. يتم تحديد موقعك عبر GPS بدقة.
+                        يجب أن تكون داخل الموقع لتسجيل الحضور/الانصراف. يتم تحديد موقعك عبر GPS.
                     </small>
                 </div>
             </div>
@@ -41,25 +38,26 @@
 {% endblock %}
 {% block scripts %}
 <script>
+let watchId = null;
 const facilityLat = {{ facility_lat|default(25.8633556) }};
 const facilityLng = {{ facility_lng|default(43.4831471) }};
 const allowedRadius = {{ allowed_radius|default(50) }};
 
 function handleAttendance(action) {
     const btn = action === 'check_in' ? 'checkInBtn' : 'checkOutBtn';
-    const el = document.getElementById(btn);
     const spinner = document.getElementById('loadingSpinner');
     const status = document.getElementById('statusMessage');
 
-    el.disabled = true;
+    document.getElementById(btn).disabled = true;
     spinner.classList.remove('d-none');
     status.className = 'alert alert-info';
-    status.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري تحديد موقعك...';
+    status.textContent = 'جارٍ تحديد موقعك...';
 
     if (!navigator.geolocation) {
         status.className = 'alert alert-danger';
-        status.innerHTML = '<i class="bi bi-x-circle"></i> المتصفح لا يدعم تحديد الموقع';
-        el.disabled = false; spinner.classList.add('d-none');
+        status.textContent = 'المتصفح لا يدعم تحديد الموقع';
+        document.getElementById(btn).disabled = false;
+        spinner.classList.add('d-none');
         return;
     }
 
@@ -78,28 +76,30 @@ function handleAttendance(action) {
             .then(data => {
                 if (data.ok) {
                     status.className = 'alert alert-success';
-                    status.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.msg;
+                    status.textContent = data.msg;
                 } else {
                     status.className = 'alert alert-danger';
-                    status.innerHTML = '<i class="bi bi-x-circle"></i> ' + data.msg;
+                    status.textContent = data.msg;
                 }
             })
             .catch(err => {
                 status.className = 'alert alert-danger';
-                status.innerHTML = '<i class="bi bi-x-circle"></i> خطأ في الاتصال';
+                status.textContent = 'خطأ في الاتصال: ' + err.message;
             })
-            .finally(() => { el.disabled = false; });
+            .finally(() => {
+                document.getElementById(btn).disabled = false;
+            });
         },
         function(err) {
             spinner.classList.add('d-none');
-            el.disabled = false;
+            status.className = 'alert alert-danger';
             const msgs = {
                 1: 'تم رفض إذن الموقع. الرجاء السماح بالوصول إلى الموقع.',
                 2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS.',
-                3: 'انتهت المهلة. حاول مرة أخرى.'
+                3: 'انتهت مهلة تحديد الموقع. حاول مرة أخرى.'
             };
-            status.className = 'alert alert-danger';
-            status.innerHTML = '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع');
+            status.textContent = msgs[err.code] || 'خطأ في تحديد الموقع: ' + err.message;
+            document.getElementById(btn).disabled = false;
         },
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
     );

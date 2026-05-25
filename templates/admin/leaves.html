@@ -1,24 +1,19 @@
 {% extends "base.html" %}
 {% block title %}إدارة الرخص{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-airplane ms-2"></i>إدارة الرخص</h4>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-6">
+<div class="row">
+    <div class="col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-clock ms-2"></i>الرخص النشطة</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-airplane ms-2"></i>الرخص النشطة</h5></div>
             <div class="card-body">
                 {% if active %}
-                <div class="list-group list-group-flush">
+                <div class="list-group">
                     {% for uid, name, chat_id, end, label in active %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <div>
-                            <span class="fw-semibold">{{ name }}</span><br>
-                            <small class="text-muted">{{ label }} — تنتهي: {{ end }}</small>
-                        </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ name }}<br><small class="text-muted">{{ label }} تنتهي: {{ end }}</small></span>
                         <form method="POST" action="{{ url_for('admin_revoke_leave', uid=uid) }}" class="d-inline">
                             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                            <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="return confirm('سحب رخصة {{ name }}؟')"><i class="bi bi-x-lg"></i> سحب</button>
+                            <button class="btn btn-danger btn-sm" onclick="return confirm('سحب رخصة {{ name }}؟')"><i class="bi bi-x-lg"></i> سحب</button>
                         </form>
                     </div>
                     {% endfor %}
@@ -27,16 +22,16 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
+    <div class="col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-plus-circle ms-2"></i>تسجيل رخصة جديدة</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-plus-circle ms-2"></i>تسجيل رخصة</h5></div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin_register_leave') }}">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label class="form-label">العسكري</label>
                         <select name="user_id" class="form-select" required>
-                            <option value="">— اختر —</option>
+                            <option value="">اختر...</option>
                             {% for sid, nm, _, _, rank, phone in soldiers %}
                             <option value="{{ sid }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
                             {% endfor %}
@@ -46,7 +41,7 @@
                         <label class="form-label">المدة (ساعات)</label>
                         <input type="number" name="hours" class="form-control" min="1" value="24" required>
                     </div>
-                    <button class="btn btn-gold w-100 py-2"><i class="bi bi-check-lg ms-1"></i> تسجيل الرخصة</button>
+                    <button class="btn btn-primary w-100">تسجيل الرخصة</button>
                 </form>
             </div>
         </div>
@@ -54,24 +49,24 @@
 </div>
 
 <div class="card">
-    <div class="card-header"><span><i class="bi bi-inbox ms-2"></i>طلبات الرخص المعلقة</span></div>
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-inbox ms-2"></i>طلبات الرخص المعلقة</h5></div>
     <div class="card-body">
         {% if requests %}
         {% for rid, ruid, label, hours, rdate, status in requests %}
         {% set u = get_user_by_id(ruid) %}
         <div class="alert alert-warning d-flex justify-content-between align-items-center">
             <div>
-                <span class="fw-semibold">{{ u.full_name if u else ruid }}</span><br>
-                <small>{{ label }} — {{ rdate }}</small>
+                <strong>{{ u.full_name if u else ruid }}</strong><br>
+                <small>{{ label }} | {{ rdate }}</small>
             </div>
-            <div class="d-flex gap-1">
+            <div class="text-nowrap">
                 <form method="POST" action="{{ url_for('admin_approve_request', rid=rid) }}" class="d-inline">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button class="btn btn-success btn-sm rounded-pill"><i class="bi bi-check-lg"></i> موافقة</button>
+                    <button class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> موافقة</button>
                 </form>
                 <form method="POST" action="{{ url_for('admin_reject_request', rid=rid) }}" class="d-inline">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button class="btn btn-danger btn-sm rounded-pill"><i class="bi bi-x-lg"></i> رفض</button>
+                    <button class="btn btn-danger btn-sm"><i class="bi bi-x-lg"></i> رفض</button>
                 </form>
             </div>
         </div>

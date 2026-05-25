@@ -1,300 +1,7 @@
-import os, datetime, uuid
+import os, sqlite3, datetime, uuid
 import bcrypt
 
-DATABASE_URL = os.getenv('DATABASE_URL', '')
-USE_PG = DATABASE_URL.startswith('postgres')
-
 DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'military.db')
-
-if USE_PG:
-    import psycopg2
-    import psycopg2.extras
-
-    def db_get(q, p=()):
-        q = q.replace('?', '%s')
-        if 'DATE(timestamp)' in q and '::date' not in q:
-            q = q.replace('DATE(timestamp)', 'DATE(timestamp)')
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        c = conn.cursor()
-        c.execute(q, p)
-        rows = c.fetchall()
-        conn.close()
-        return rows
-
-    def db_run(q, p=()):
-        q = q.replace('?', '%s')
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        c = conn.cursor()
-        c.execute(q, p)
-        conn.commit()
-        n = c.rowcount
-        conn.close()
-        return n
-
-    def init_db():
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id          SERIAL PRIMARY KEY,
-                username    TEXT UNIQUE NOT NULL,
-                password    TEXT NOT NULL,
-                full_name   TEXT NOT NULL,
-                role        TEXT DEFAULT 'employee',
-                chat_id     BIGINT,
-                device_uid  TEXT,
-                is_blocked  INTEGER DEFAULT 0,
-                phone_number TEXT DEFAULT NULL,
-                rank_title  TEXT DEFAULT ''
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS attendance (
-                id        SERIAL PRIMARY KEY,
-                user_id   INTEGER NOT NULL,
-                action    TEXT NOT NULL,
-                latitude  DOUBLE PRECISION,
-                longitude DOUBLE PRECISION,
-                timestamp TEXT NOT NULL,
-                note      TEXT DEFAULT ''
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS leaves (
-                id             SERIAL PRIMARY KEY,
-                user_id        INTEGER UNIQUE NOT NULL,
-                start_time     TEXT,
-                end_time       TEXT,
-                duration_label TEXT
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS leave_requests (
-                id             SERIAL PRIMARY KEY,
-                user_id        INTEGER NOT NULL,
-                duration_label TEXT,
-                hours_duration INTEGER,
-                request_date   TEXT,
-                status         TEXT DEFAULT 'PENDING'
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS notifications (
-                id         SERIAL PRIMARY KEY,
-                user_id    INTEGER NOT NULL,
-                content    TEXT NOT NULL,
-                is_read    INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS shifts (
-                id          SERIAL PRIMARY KEY,
-                shift_date  TEXT NOT NULL,
-                current_duty TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS urgent_reports (
-                id          SERIAL PRIMARY KEY,
-                sender_id   INTEGER NOT NULL,
-                report_text TEXT NOT NULL,
-                reply_text  TEXT,
-                created_at  TEXT NOT NULL,
-                status      TEXT DEFAULT 'OPEN'
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS circulars (
-                id         SERIAL PRIMARY KEY,
-                content    TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS history_records (
-                id         SERIAL PRIMARY KEY,
-                user_id    INTEGER NOT NULL,
-                note       TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS security_alerts (
-                id         SERIAL PRIMARY KEY,
-                user_id    INTEGER,
-                alert_type TEXT NOT NULL,
-                detail     TEXT,
-                created_at TEXT NOT NULL
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS shifts_archive (
-                id SERIAL PRIMARY KEY, shift_date TEXT, current_duty TEXT,
-                username TEXT DEFAULT '', created_at TEXT)
-        """)
-        conn.commit(); conn.close()
-
-    def hash_password(password):
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(stored, password):
-        if stored.startswith('$2'):
-            try: return bcrypt.checkpw(password.encode('utf-8'), stored.encode('utf-8'))
-            except: return False
-        return stored == password
-
-    def add_user(u, p, n, role='employee', rank='', phone=''):
-        try:
-            pw = hash_password(p)
-            db_run("INSERT INTO users (username,password,full_name,role,rank_title,phone_number) VALUES (%s,%s,%s,%s,%s,%s)",
-                   (u.strip().lower(), pw, n.strip(), role, rank.strip(), phone.strip()))
-            return True, "تمت الإضافة بنجاح"
-        except Exception as e:
-            if 'duplicate' in str(e).lower():
-                return False, "يوزر موجود مسبقاً"
-            return False, str(e)
-
-    def update_user(uid, field, value):
-        if field in ('username','password','full_name','rank_title','phone_number'):
-            if field == 'password':
-                value = hash_password(value)
-            elif field == 'username':
-                try:
-                    db_run("UPDATE users SET username=%s WHERE id=%s", (value.strip().lower(), uid))
-                    return True
-                except: return False
-            v = value.strip() if isinstance(value, str) else value
-            db_run(f"UPDATE users SET {field}=%s WHERE id=%s", (v, uid))
-            return True
-        return False
-
-else:
-    import sqlite3
-
-    def db_get(q, p=()):
-        conn = sqlite3.connect(DB); c = conn.cursor()
-        c.execute(q, p); rows = c.fetchall(); conn.close(); return rows
-
-    def db_run(q, p=()):
-        conn = sqlite3.connect(DB); c = conn.cursor()
-        c.execute(q, p); conn.commit(); n = c.rowcount; conn.close(); return n
-
-    def init_db():
-        conn = sqlite3.connect(DB); c = conn.cursor()
-        c.executescript('''
-            CREATE TABLE IF NOT EXISTS users (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                username    TEXT UNIQUE NOT NULL,
-                password    TEXT NOT NULL,
-                full_name   TEXT NOT NULL,
-                role        TEXT DEFAULT 'employee',
-                chat_id     INTEGER,
-                device_uid  TEXT,
-                is_blocked  INTEGER DEFAULT 0,
-            phone_number TEXT DEFAULT NULL,
-            rank_title  TEXT DEFAULT ''
-        );
-        CREATE TABLE IF NOT EXISTS attendance (
-            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id   INTEGER NOT NULL,
-            action    TEXT NOT NULL,
-            latitude  REAL,
-            longitude REAL,
-            timestamp TEXT NOT NULL,
-            note      TEXT DEFAULT ''
-        );
-            CREATE TABLE IF NOT EXISTS leaves (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id        INTEGER UNIQUE NOT NULL,
-                start_time     TEXT,
-                end_time       TEXT,
-                duration_label TEXT
-            );
-            CREATE TABLE IF NOT EXISTS leave_requests (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id        INTEGER NOT NULL,
-                duration_label TEXT,
-                hours_duration INTEGER,
-                request_date   TEXT,
-                status         TEXT DEFAULT 'PENDING'
-            );
-            CREATE TABLE IF NOT EXISTS notifications (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id    INTEGER NOT NULL,
-                content    TEXT NOT NULL,
-                is_read    INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS shifts (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                shift_date  TEXT NOT NULL,
-                current_duty TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS urgent_reports (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                sender_id   INTEGER NOT NULL,
-                report_text TEXT NOT NULL,
-                reply_text  TEXT,
-                created_at  TEXT NOT NULL,
-                status      TEXT DEFAULT 'OPEN'
-            );
-            CREATE TABLE IF NOT EXISTS circulars (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                content    TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS history_records (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id    INTEGER NOT NULL,
-                note       TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS security_alerts (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id    INTEGER,
-                alert_type TEXT NOT NULL,
-                detail     TEXT,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS shifts_archive (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, shift_date TEXT, current_duty TEXT,
-                username TEXT DEFAULT '', created_at TEXT);
-        ''')
-        conn.commit(); conn.close()
-
-    def hash_password(password):
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(stored, password):
-        if stored.startswith('$2'):
-            try: return bcrypt.checkpw(password.encode('utf-8'), stored.encode('utf-8'))
-            except: return False
-        return stored == password
-
-    def add_user(u, p, n, role='employee', rank='', phone=''):
-        try:
-            pw = hash_password(p)
-            db_run("INSERT INTO users (username,password,full_name,role,rank_title,phone_number) VALUES (?,?,?,?,?,?)",
-                   (u.strip().lower(), pw, n.strip(), role, rank.strip(), phone.strip()))
-            return True, "تمت الإضافة بنجاح"
-        except sqlite3.IntegrityError:
-            return False, "يوزر موجود مسبقاً"
-        except Exception as e:
-            return False, str(e)
-
-    def update_user(uid, field, value):
-        if field in ('username','password','full_name','rank_title','phone_number'):
-            if field == 'password':
-                value = hash_password(value)
-            elif field == 'username':
-                try:
-                    db_run("UPDATE users SET username=? WHERE id=?", (value.strip().lower(), uid))
-                    return True
-                except: return False
-            db_run(f"UPDATE users SET {field}=? WHERE id=?", (value.strip() if isinstance(value, str) else value, uid))
-            return True
-        return False
 
 def ksa():
     return datetime.datetime.utcnow() + datetime.timedelta(hours=3)
@@ -311,9 +18,109 @@ def rank_index(r):
     try: return RANKS_ORDER.index(r)
     except: return -1
 
+def db_get(q, p=()):
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.execute(q, p); rows = c.fetchall(); conn.close(); return rows
+
+def db_run(q, p=()):
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.execute(q, p); conn.commit(); n = c.rowcount; conn.close(); return n
+
+def init_db():
+    conn = sqlite3.connect(DB); c = conn.cursor()
+    c.executescript('''
+        CREATE TABLE IF NOT EXISTS users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            username    TEXT UNIQUE NOT NULL,
+            password    TEXT NOT NULL,
+            full_name   TEXT NOT NULL,
+            role        TEXT DEFAULT 'employee',
+            chat_id     INTEGER,
+            device_uid  TEXT,
+            is_blocked  INTEGER DEFAULT 0,
+            phone_number TEXT DEFAULT NULL,
+            rank_title  TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS attendance (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id   INTEGER NOT NULL,
+            action    TEXT NOT NULL,
+            latitude  REAL,
+            longitude REAL,
+            timestamp TEXT NOT NULL,
+            note      TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS leaves (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id        INTEGER UNIQUE NOT NULL,
+            start_time     TEXT,
+            end_time       TEXT,
+            duration_label TEXT
+        );
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id        INTEGER NOT NULL,
+            duration_label TEXT,
+            hours_duration INTEGER,
+            request_date   TEXT,
+            status         TEXT DEFAULT 'PENDING'
+        );
+        CREATE TABLE IF NOT EXISTS notifications (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL,
+            content    TEXT NOT NULL,
+            is_read    INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS shifts (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            shift_date  TEXT NOT NULL,
+            current_duty TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS urgent_reports (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id   INTEGER NOT NULL,
+            report_text TEXT NOT NULL,
+            reply_text  TEXT,
+            created_at  TEXT NOT NULL,
+            status      TEXT DEFAULT 'OPEN'
+        );
+        CREATE TABLE IF NOT EXISTS circulars (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            content    TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS history_records (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL,
+            note       TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS security_alerts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER,
+            alert_type TEXT NOT NULL,
+            detail     TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS shifts_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, shift_date TEXT, current_duty TEXT,
+            username TEXT DEFAULT '', created_at TEXT);
+    ''')
+    conn.commit(); conn.close()
+
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def check_password(stored, password):
+    if stored.startswith('$2'):
+        try: return bcrypt.checkpw(password.encode('utf-8'), stored.encode('utf-8'))
+        except: return False
+    return stored == password
+
 def get_user(username):
-    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE LOWER(TRIM(username))=?"
-               , (username.strip().lower(),))
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE LOWER(TRIM(username))=?",
+               (username.strip().lower(),))
     if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
     return None
 
@@ -326,8 +133,29 @@ def get_soldiers():
     rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee'")
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
-def set_admin_phone(username, phone):
-    db_run("UPDATE users SET phone_number=? WHERE username=? AND role='admin'", (phone, username))
+def add_user(u, p, n, role='employee', rank='', phone=''):
+    try:
+        pw = hash_password(p)
+        db_run("INSERT INTO users (username,password,full_name,role,rank_title,phone_number) VALUES (?,?,?,?,?,?)",
+               (u.strip().lower(), pw, n.strip(), role, rank.strip(), phone.strip()))
+        return True, "تمت الإضافة بنجاح"
+    except sqlite3.IntegrityError:
+        return False, "يوزر موجود مسبقاً"
+    except Exception as e:
+        return False, str(e)
+
+def update_user(uid, field, value):
+    if field in ('username','password','full_name','rank_title','phone_number'):
+        if field == 'password':
+            value = hash_password(value)
+        elif field == 'username':
+            try:
+                db_run("UPDATE users SET username=? WHERE id=?", (value.strip().lower(), uid))
+                return True
+            except: return False
+        db_run(f"UPDATE users SET {field}=? WHERE id=?", (value.strip() if isinstance(value, str) else value, uid))
+        return True
+    return False
 
 def delete_user(uid):
     db_run("DELETE FROM users WHERE id=?", (uid,))
@@ -339,49 +167,24 @@ def toggle_block(uid):
     db_run("UPDATE users SET is_blocked=? WHERE id=?", (new, uid))
     return new
 
-def add_device_uid(uid, device_id):
-    cur = get_user_by_id(uid)
-    devices = cur['device_uid'] or ''
-    devs = [d for d in devices.split(',') if d]
-    if device_id in devs:
-        return
-    if len(devs) >= 2:
-        return
-    devs.append(device_id)
-    db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), uid))
-
-def reset_device_uid(uid):
-    db_run("UPDATE users SET device_uid=? WHERE id=?", ('', uid))
+def set_device_uid(uid, device_id):
+    db_run("UPDATE users SET device_uid=? WHERE id=?", (device_id, uid))
 
 # Attendance
-def get_today_attendance(user_id):
-    today = ksa().strftime('%Y-%m-%d')
-    rows = db_get("SELECT action FROM attendance WHERE user_id=? AND DATE(timestamp)=?", (user_id, today))
-    return [r[0] for r in rows]
-
 def record_attendance(user_id, action, lat, lng, note=''):
-    today_acts = get_today_attendance(user_id)
-    if action == 'check_in' and 'check_in' in today_acts:
-        return False, 'تم تسجيل الحضور مسبقاً اليوم'
-    if action == 'check_out' and 'check_out' in today_acts:
-        return False, 'تم تسجيل الانصراف مسبقاً'
-    if action == 'check_out' and 'check_in' not in today_acts:
-        return False, 'لا يمكن الانصراف قبل تسجيل الحضور'
     db_run("INSERT INTO attendance (user_id,action,latitude,longitude,timestamp,note) VALUES (?,?,?,?,?,?)",
            (user_id, action, lat, lng, ksa_str(), note))
-    return True, ''
 
 def get_report(date_str):
-    rows = db_get("SELECT user_id,action,timestamp,note,latitude,longitude FROM attendance WHERE DATE(timestamp)=?", (date_str,))
+    rows = db_get("SELECT user_id,action,timestamp,note FROM attendance WHERE DATE(timestamp)=?", (date_str,))
     amap = {}
-    for uid,action,ts,note,lat,lng in rows:
-        if uid not in amap: amap[uid] = {'check_in':None,'check_out':None,'note':'','loc':'','loc_out':''}
+    for uid,action,ts,note in rows:
+        if uid not in amap: amap[uid] = {'check_in':None,'check_out':None,'note':''}
         t = ts.split(' ')[1][:5]
-        loc = f"{lat},{lng}" if lat and lng else ''
         if action=='check_in' and not amap[uid]['check_in']:
-            amap[uid]['check_in'] = t; amap[uid]['note'] = note or ''; amap[uid]['loc'] = loc
+            amap[uid]['check_in'] = t; amap[uid]['note'] = note or ''
         elif action=='check_out':
-            amap[uid]['check_out'] = t; amap[uid]['loc_out'] = loc
+            amap[uid]['check_out'] = t
     return amap
 
 def get_dates():
@@ -507,6 +310,7 @@ def reply_report(rep_id, reply_text):
     rows = db_get("SELECT sender_id FROM urgent_reports WHERE id=?", (rep_id,))
     return rows[0][0] if rows else None
 
+# Get employee chat IDs for broadcast
 def get_employee_chat_ids():
     return db_get("SELECT chat_id FROM users WHERE role='employee' AND chat_id IS NOT NULL AND is_blocked=0")
 

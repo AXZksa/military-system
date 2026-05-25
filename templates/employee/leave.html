@@ -1,47 +1,41 @@
 {% extends "base.html" %}
 {% block title %}رخصتي{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-airplane ms-2"></i>الرخص</h4>
-
-<div class="row g-3">
-    <div class="col-md-6">
+<div class="row">
+    <div class="col-md-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-info-circle ms-2"></i>حالة الرخصة</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-airplane ms-2"></i>حالة الرخصة</h5></div>
             <div class="card-body">
                 {% if lv %}
                 <div class="alert alert-info">
-                    <p class="mb-1 fw-bold">🟢 مرخوص حالياً</p>
-                    <p class="mb-1">المدة: {{ lv.label }}</p>
-                    <p class="mb-1">من: {{ lv.start }}</p>
-                    <p class="mb-0">إلى: {{ lv.end }}</p>
+                    <p class="mb-1"><strong>الحالة:</strong> 🟢 مرخوص</p>
+                    <p class="mb-1"><strong>المدة:</strong> {{ lv.label }}</p>
+                    <p class="mb-1"><strong>من:</strong> {{ lv.start }}</p>
+                    <p class="mb-0"><strong>إلى:</strong> {{ lv.end }}</p>
                 </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="bi bi-clock fs-1 text-muted"></i>
-                    <p class="text-muted mt-2">غير مرخوص حالياً.</p>
+                <div class="alert alert-secondary">
+                    <p class="mb-0">غير مرخوص حالياً.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-send ms-2"></i>طلب رخصة جديدة</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-send ms-2"></i>طلب رخصة</h5></div>
             <div class="card-body">
                 {% if lv %}
-                <div class="alert alert-warning d-flex align-items-center gap-2 py-2">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    <span>لديك رخصة نشطة. لا يمكن طلب رخصة جديدة.</span>
-                </div>
+                <div class="alert alert-warning">لديك رخصة نشطة. لا يمكن طلب رخصة جديدة.</div>
                 {% else %}
                 <form method="POST" action="{{ url_for('employee_request_leave') }}">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <div class="d-grid gap-2">
-                        <button name="hours" value="24" class="btn btn-outline-primary btn-lg rounded-pill py-3 fw-bold">طلب رخصة 24 ساعة</button>
-                        <button name="hours" value="48" class="btn btn-outline-primary btn-lg rounded-pill py-3 fw-bold">طلب رخصة 48 ساعة</button>
-                        <button name="hours" value="72" class="btn btn-outline-primary btn-lg rounded-pill py-3 fw-bold">طلب رخصة 72 ساعة</button>
+                    <div class="d-grid gap-3">
+                        <button name="hours" value="24" class="btn btn-outline-primary btn-lg">طلب رخصة 24 ساعة</button>
+                        <button name="hours" value="48" class="btn btn-outline-primary btn-lg">طلب رخصة 48 ساعة</button>
+                        <button name="hours" value="72" class="btn btn-outline-primary btn-lg">طلب رخصة 72 ساعة</button>
                     </div>
-                    <p class="text-muted mt-3 mb-0 small text-center">يحتاج الطلب إلى موافقة القائد.</p>
+                    <p class="text-muted mt-3 mb-0 small">بعد تقديم الطلب، ينتظر موافقة القائد.</p>
                 </form>
                 {% endif %}
             </div>
@@ -49,20 +43,20 @@
     </div>
 </div>
 
-<div class="card mt-3">
-    <div class="card-header"><span><i class="bi bi-clock-history ms-2"></i>آخر الطلبات</span></div>
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history ms-2"></i>آخر الطلبات</h5></div>
     <div class="card-body">
         {% if requests %}
         <div class="table-responsive">
             <table class="table">
-                <thead class="table-dark"><tr><th>المدة</th><th>التاريخ</th><th>الحالة</th></tr></thead>
+                <thead><tr><th>المدة</th><th>التاريخ</th><th>الحالة</th></tr></thead>
                 <tbody>
                     {% for label, date, status in requests %}
                     <tr>
-                        <td class="fw-semibold">{{ label }}</td>
-                        <td class="text-muted">{{ date }}</td>
+                        <td>{{ label }}</td>
+                        <td>{{ date }}</td>
                         <td>
-                            <span class="badge rounded-pill {% if status=='APPROVED' %}bg-success{% elif status=='REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                            <span class="badge {% if status=='APPROVED' %}bg-success{% elif status=='REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
                                 {{ {'PENDING':'معلق','APPROVED':'معتمد','REJECTED':'مرفوض'}.get(status, status) }}
                             </span>
                         </td>

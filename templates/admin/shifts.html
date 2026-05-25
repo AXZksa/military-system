@@ -1,21 +1,19 @@
 {% extends "base.html" %}
 {% block title %}المناوبات{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-calendar-check ms-2"></i>إدارة المناوبات</h4>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-5">
-        <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-person-check ms-2"></i>مستلمو اليوم</span></div>
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-calendar-check ms-2"></i>مستلمو اليوم</h5></div>
             <div class="card-body">
                 {% if today %}
-                <div class="list-group list-group-flush">
+                <div class="list-group">
                     {% for sid, duty in today %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span class="fw-semibold">{{ duty }}</span>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ duty }}</span>
                         <form method="POST" action="{{ url_for('admin_delete_shift', sid=sid) }}" class="d-inline">
                             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                            <button class="btn btn-outline-danger btn-sm rounded-pill" onclick="return confirm('فك استلامة {{ duty }}؟')"><i class="bi bi-unlock"></i> فك</button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="return confirm('فك استلامة {{ duty }}؟')"><i class="bi bi-unlock"></i> فك</button>
                         </form>
                     </div>
                     {% endfor %}
@@ -24,22 +22,19 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-7">
-        <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-person-plus ms-2"></i>تعيين مستلم</span></div>
+    <div class="col-lg-7 mb-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-person-plus ms-2"></i>تعيين مستلم</h5></div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin_set_shift') }}">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">اختر العسكري</label>
-                        <select name="full_name" class="form-select" required>
-                            <option value="">— اختر —</option>
-                            {% for sid, nm, _, _, rank, phone in soldiers %}
-                            <option value="{{ rank ~ ' / ' if rank }}{{ nm }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button class="btn btn-gold w-100 py-2"><i class="bi bi-check-lg ms-1"></i> تعيين</button>
+                    <select name="full_name" class="form-select mb-3" required>
+                        <option value="">اختر العسكري...</option>
+                        {% for sid, nm, _, _, rank, phone in soldiers %}
+                        <option value="{{ rank ~ ' / ' if rank }}{{ nm }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-primary w-100">تعيين</button>
                 </form>
             </div>
         </div>
@@ -47,7 +42,7 @@
 </div>
 
 <div class="card">
-    <div class="card-header"><span><i class="bi bi-journal-text ms-2"></i>سجل المناوبات</span></div>
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-journal-text ms-2"></i>سجل المناوبات</h5></div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -56,7 +51,7 @@
                 </thead>
                 <tbody>
                     {% for date, duty, uname, cat in archive %}
-                    <tr><td>{{ date }}</td><td class="fw-semibold">{{ duty }}</td><td><code dir="ltr">{{ uname or '—' }}</code></td><td>{{ cat[11:16] if cat else '—' }}</td></tr>
+                    <tr><td>{{ date }}</td><td>{{ duty }}</td><td><code>{{ uname or '—' }}</code></td><td>{{ cat[11:16] if cat else '—' }}</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

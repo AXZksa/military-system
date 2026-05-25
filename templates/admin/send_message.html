@@ -1,32 +1,26 @@
 {% extends "base.html" %}
 {% block title %}المراسلة{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-chat-dots ms-2"></i>إرسال رسالة لعسكري</h4>
-
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card">
-            <div class="card-header"><span><i class="bi bi-send ms-2"></i>رسالة جديدة</span></div>
-            <div class="card-body">
-                <form method="POST">
-                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label class="form-label">العسكري</label>
-                        <select name="user_id" class="form-select" required>
-                            <option value="">— اختر —</option>
-                            {% for sid, nm, _, _, rank, phone in soldiers %}
-                            <option value="{{ sid }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">الرسالة</label>
-                        <textarea name="message" class="form-control" rows="4" required placeholder="نص الرسالة..."></textarea>
-                    </div>
-                    <button class="btn btn-primary w-100 py-2"><i class="bi bi-send ms-1"></i> إرسال</button>
-                </form>
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-chat-dots ms-2"></i>إرسال رسالة لعسكري</h5></div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">العسكري</label>
+                <select name="user_id" class="form-select" required>
+                    <option value="">اختر...</option>
+                    {% for sid, nm, _, _, rank, phone in soldiers %}
+                    <option value="{{ sid }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
+            <div class="mb-3">
+                <label class="form-label">الرسالة</label>
+                <textarea name="message" class="form-control" rows="4" required placeholder="نص الرسالة..."></textarea>
+            </div>
+            <button class="btn btn-primary w-100">إرسال</button>
+        </form>
     </div>
 </div>
 {% endblock %}

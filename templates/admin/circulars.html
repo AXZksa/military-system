@@ -1,17 +1,15 @@
 {% extends "base.html" %}
 {% block title %}التعاميم{% endblock %}
 {% block content %}
-<h4 class="fw-bold mb-4"><i class="bi bi-megaphone ms-2"></i>التعاميم</h4>
-
-<div class="row g-3">
-    <div class="col-lg-6">
+<div class="row">
+    <div class="col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-megaphone ms-2"></i>التعميم الحالي</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone ms-2"></i>التعميم الحالي</h5></div>
             <div class="card-body">
                 {% if circular %}
-                <div class="border-start border-4 border-gold px-3 py-2 bg-light rounded-2">
-                    <p class="mb-1 fs-5">{{ circular[0] }}</p>
-                    <small class="text-muted">صدر بتاريخ: {{ circular[1] }}</small>
+                <div class="border-start border-4 border-primary pe-3">
+                    <p class="mb-1">{{ circular[0] }}</p>
+                    <small class="text-muted">صدر: {{ circular[1] }}</small>
                 </div>
                 {% else %}
                 <p class="text-muted mb-0">لا يوجد تعميم حالياً.</p>
@@ -19,16 +17,16 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
+    <div class="col-lg-6 mb-4">
         <div class="card h-100">
-            <div class="card-header"><span><i class="bi bi-pencil ms-2"></i>إضافة تعميم جديد</span></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-pencil ms-2"></i>إضافة تعميم</h5></div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin_set_circular') }}">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <textarea name="content" class="form-control" rows="4" required placeholder="نص التعميم..."></textarea>
                     </div>
-                    <button class="btn btn-primary w-100 py-2 mb-2"><i class="bi bi-save ms-1"></i> حفظ التعميم</button>
+                    <button class="btn btn-primary w-100 mb-2">حفظ التعميم</button>
                 </form>
                 <hr>
                 <form method="POST" action="{{ url_for('admin_broadcast') }}">
@@ -36,11 +34,10 @@
                     <div class="mb-3">
                         <textarea name="content" class="form-control" rows="4" required placeholder="نص التعميم للبث..."></textarea>
                     </div>
-                    <button class="btn btn-gold w-100 py-2"><i class="bi bi-send ms-1"></i> بث التعميم للجميع</button>
+                    <button class="btn btn-warning w-100">بث التعميم للجميع</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
-<style>.border-gold { border-color: var(--gold) !important; }</style>
 {% endblock %}
