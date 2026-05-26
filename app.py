@@ -118,31 +118,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
-    if request.method == 'POST':
-        entered = request.form.get('code', '').strip()
-        secret = get_totp_secret(u['id'])
-        totp = pyotp.TOTP(secret)
-        if totp.verify(entered, valid_window=1):
-            device_fp = request.form.get('device_fp', '')
-            if device_fp:
-                add_device_uid(u['id'], device_fp)
-            session.clear()
-            session['user_id'] = u['id']
-            session['username'] = u['username']
-            session['full_name'] = u['full_name']
-            session['role'] = u['role']
-            session.permanent = True
-            flash('تم التحقق بنجاح. مرحباً قائد المنظومة.', 'success')
-            return redirect(url_for('admin_dashboard'))
-        flash('رمز التحقق غير صحيح. حاول مرة أخرى.', 'danger')
-        return render_template('verify_2fa.html')
-    return render_template('verify_2fa.html')
-
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
 
 @app.route('/')
 def index():
