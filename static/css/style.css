@@ -544,14 +544,6 @@ body {
 .stat-card-blue h2 { color: var(--accent-blue); }
 .stat-card-orange { border-left: 3px solid var(--accent-orange); }
 .stat-card-orange h2 { color: var(--accent-orange); }
-.stat-card-fill-green {
-    background: linear-gradient(135deg, #0d2818, #1a4a2a);
-    border-left: none;
-    border-color: var(--accent-green-dim);
-}
-.stat-card-fill-green h2, .stat-card-fill-green h6 { color: var(--text-primary); }
-.stat-card-fill-green .stat-icon { opacity: .15; color: var(--accent-green-hover); }
-
 /* ── TABLES ── */
 .table {
     margin: 0;
