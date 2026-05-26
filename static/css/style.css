@@ -127,36 +127,6 @@ body {
     border-color: var(--accent-green);
 }
 
-.topbar .navbar-toggler-icon {
-    width: 18px; height: 14px;
-    background-image: none;
-    position: relative;
-    display: inline-block;
-}
-
-.topbar .navbar-toggler-icon::before,
-.topbar .navbar-toggler-icon::after,
-.topbar .navbar-toggler-icon i {
-    content: '';
-    position: absolute;
-    right: 0;
-    width: 100%;
-    height: 2px;
-    background: var(--text-secondary);
-    border-radius: 2px;
-    transition: var(--transition);
-}
-
-.topbar .navbar-toggler-icon::before { top: 0; }
-.topbar .navbar-toggler-icon i { top: 6px; }
-.topbar .navbar-toggler-icon::after { bottom: 0; }
-
-.topbar .navbar-toggler:hover .navbar-toggler-icon::before,
-.topbar .navbar-toggler:hover .navbar-toggler-icon::after,
-.topbar .navbar-toggler:hover .navbar-toggler-icon i {
-    background: var(--accent-green);
-}
-
 .topbar .btn-icon {
     width: 36px; height: 36px;
     border-radius: 8px;

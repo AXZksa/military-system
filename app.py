@@ -108,10 +108,18 @@ def login():
                 if device_fp not in devs:
                     if len(devs) < 2:
                         add_device_uid(user['id'], device_fp)
+                        add_security_alert(user['id'], 'جهاز جديد',
+                            f"تم تسجيل جهاز جديد للحساب. البصمة: {device_fp[:30]}...")
+                        admins = get_admin_ids()
+                        for (aid,) in admins:
+                            push_notif(aid, f"⚠️ تنبيه أمني: تم تسجيل جهاز جديد لحساب {user['full_name']}")
                     else:
                         add_security_alert(user['id'], 'جهاز غير معروف',
                             f"محاولة دخول من جهاز جديد. البصمة: {device_fp[:30]}...")
-                        flash('جهاز غير معروف. تم تسجيل بلاغ أمني.', 'danger')
+                        admins = get_admin_ids()
+                        for (aid,) in admins:
+                            push_notif(aid, f"🚨 إنذار: محاولة دخول من جهاز غير معروف لحساب {user['full_name']}")
+                        flash('جهاز غير معروف. تم تسجيل بلاغ أمني وإبلاغ القيادة.', 'danger')
                         return render_template('login.html')
         elif device_fp:
             add_device_uid(user['id'], device_fp)
