@@ -122,6 +122,16 @@
                         <i class="bi bi-journal-text"></i> سجل التدقيق
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="sidebar-link {% if '/admin/sessions' in request.path %}active{% endif %}" href="{{ url_for('admin_sessions') }}">
+                        <i class="bi bi-laptop"></i> إدارة الجلسات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="sidebar-link {% if '/admin/attendance-errors' in request.path %}active{% endif %}" href="{{ url_for('admin_attendance_errors') }}">
+                        <i class="bi bi-exclamation-triangle"></i> أخطاء الحضور
+                    </a>
+                </li>
                 {% else %}
                 <li class="nav-item">
                     <a class="sidebar-link {% if '/employee' == request.path %}active{% endif %}" href="{{ url_for('employee_dashboard') }}">

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}سجل أخطاء الحضور{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-exclamation-triangle ms-2"></i>سجل أخطاء الحضور</h4>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text ms-2"></i>الأخطاء المسجلة</span>
+        <span class="badge bg-warning rounded-pill">{{ errors|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>المستخدم</th>
+                        <th>الخطأ</th>
+                        <th>الإحداثيات</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in errors %}
+                    <tr>
+                        <td class="fw-semibold">{{ e.full_name or '?' }}</td>
+                        <td><code style="font-size:12px;word-break:break-word;">{{ e.error }}</code></td>
+                        <td><small>{{ e.latitude ~ ',' ~ e.longitude if e.latitude and e.longitude else '—' }}</small></td>
+                        <td><small class="text-muted">{{ e.created_at }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">✅ لا توجد أخطاء مسجلة</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

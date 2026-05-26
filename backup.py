@@ -22,6 +22,8 @@ TABLES_MAP = {
     'shifts_archive': ('id','shift_date','current_duty','username','created_at'),
     'system_settings': ('key','value'),
     'audit_log': ('id','admin_id','action','target_id','details','created_at'),
+    'sessions': ('id','user_id','session_id','ip_address','user_agent','browser','os','device_type','created_at','last_activity','is_active'),
+    'attendance_errors': ('id','user_id','error','latitude','longitude','created_at'),
 }
 
 LOCK = threading.Lock()

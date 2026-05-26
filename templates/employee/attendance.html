@@ -16,7 +16,13 @@
                 </div>
                 <div id="loadingSpinner" class="d-none mb-3">
                     <div class="spinner-border" style="color:var(--accent-green);" role="status"></div>
-                    <p class="mt-2 text-muted">جارٍ تحديد موقعك عبر GPS...</p>
+                    <p class="mt-2 text-muted" id="loadingText">جارٍ تحديد موقعك عبر GPS...</p>
+                </div>
+                <div id="retryCount" class="d-none mb-2">
+                    <small class="text-muted">محاولة <span id="retryNum">1</span>/3</small>
+                    <div class="progress" style="height:4px;background:var(--bg-tertiary);">
+                        <div id="retryBar" class="progress-bar" style="width:33%;background:var(--accent-gold);"></div>
+                    </div>
                 </div>
                 <div class="d-grid gap-3">
                     {% if has_check_out %}
@@ -54,6 +60,8 @@ const facilityLng = {{ facility_lng|default(43.4831471) }};
 const allowedRadius = {{ allowed_radius|default(50) }};
 const hasCheckIn = {{ 'true' if has_check_in else 'false' }};
 const hasCheckOut = {{ 'true' if has_check_out else 'false' }};
+var retryAttempts = 0;
+const maxRetries = 3;
 
 function setStatus(cls, html) {
     var s = document.getElementById('statusMessage');
@@ -61,35 +69,66 @@ function setStatus(cls, html) {
     s.innerHTML = html;
 }
 
-function setLoading(on) {
+function setLoading(on, text) {
     document.getElementById('loadingSpinner').classList.toggle('d-none', !on);
+    if (text) document.getElementById('loadingText').textContent = text;
 }
 
-function sendAttendance(action, lat, lng, isFallback) {
-    setLoading(true);
+function showRetry(attempt) {
+    var el = document.getElementById('retryCount');
+    if (attempt > 0) {
+        el.classList.remove('d-none');
+        document.getElementById('retryNum').textContent = attempt;
+        document.getElementById('retryBar').style.width = (attempt / maxRetries * 100) + '%';
+    } else {
+        el.classList.add('d-none');
+    }
+}
+
+function sendAttendance(action, lat, lng, noteVal) {
+    setLoading(true, 'جاري تسجيل الحضور...');
     setStatus('info', '<i class="bi bi-hourglass-split"></i> جاري تسجيل...');
-    var body = JSON.stringify({latitude: lat, longitude: lng, fallback: isFallback || false, note: isFallback ? 'بدون GPS' : ''});
-    fetch(action === 'check_in' ? '/employee/check-in' : '/employee/check-out', {
+    var body = JSON.stringify({latitude: lat, longitude: lng, note: noteVal || ''});
+    return fetch(action === 'check_in' ? '/employee/check-in' : '/employee/check-out', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: body
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.ok) {
-            setStatus('success', '<i class="bi bi-check-circle"></i> ' + data.msg);
+    .then(function(r) {
+        return r.json().then(function(d) { return {status: r.status, data: d}; });
+    })
+    .then(function(result) {
+        if (result.data.ok) {
+            setStatus('success', '<i class="bi bi-check-circle"></i> ' + result.data.msg);
             setTimeout(function() { location.reload(); }, 1500);
+            return true;
         } else {
-            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + data.msg);
+            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + result.data.msg);
+            return false;
         }
     })
-    .catch(function() {
-        setStatus('danger', '<i class="bi bi-x-circle"></i> خطأ في الاتصال');
-    })
-    .finally(function() {
-        setLoading(false);
-        var btn = document.getElementById('actionBtn');
-        if (btn) btn.disabled = false;
+    .catch(function(err) {
+        setStatus('danger', '<i class="bi bi-x-circle"></i> خطأ في الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
+        return false;
+    });
+}
+
+function doRetry(action, lat, lng) {
+    retryAttempts++;
+    showRetry(retryAttempts);
+    setLoading(true, 'محاولة الإرسال (' + retryAttempts + '/' + maxRetries + ')...');
+    setStatus('warning', '<i class="bi bi-arrow-repeat"></i> جاري إعادة المحاولة (' + retryAttempts + '/' + maxRetries + ')...');
+    sendAttendance(action, lat, lng, '').then(function(success) {
+        if (success) return;
+        if (retryAttempts < maxRetries) {
+            setTimeout(function() { doRetry(action, lat, lng); }, 2000);
+        } else {
+            setLoading(false);
+            showRetry(0);
+            setStatus('danger', '<i class="bi bi-x-circle"></i> فشلت جميع محاولات الإرسال. حاول مرة أخرى لاحقاً.');
+            var btn = document.getElementById('actionBtn');
+            if (btn) btn.disabled = false;
+        }
     });
 }
 
@@ -98,7 +137,9 @@ function handleAttendance(action) {
     if (!btn) return;
     btn.disabled = true;
 
-    setLoading(true);
+    retryAttempts = 0;
+    showRetry(0);
+    setLoading(true, 'جارٍ تحديد موقعك عبر GPS...');
     setStatus('info', '<i class="bi bi-hourglass-split"></i> جاري تحديد موقعك...');
 
     if (!navigator.geolocation) {
@@ -109,19 +150,20 @@ function handleAttendance(action) {
 
     navigator.geolocation.getCurrentPosition(
         function(pos) {
-            sendAttendance(action, pos.coords.latitude, pos.coords.longitude);
+            setLoading(true, 'جارٍ تسجيل الحضور...');
+            doRetry(action, pos.coords.latitude, pos.coords.longitude);
         },
         function(err) {
             setLoading(false);
             btn.disabled = false;
             var msgs = {
-                1: 'تم رفض إذن الموقع. تأكد من تفعيل GPS وحاول مرة أخرى.',
-                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS وحاول مرة أخرى.',
-                3: 'انتهت المهلة. حاول مرة أخرى.'
+                1: 'تم رفض إذن الموقع. افتح إعدادات المتصفح > الخصوصية > الموقع > اسمح لهذا الموقع.',
+                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS (نظام تحديد المواقع) في جهازك.',
+                3: 'انتهت مهلة GPS. حاول مرة أخرى وتأكد من وجودك في منطقة مفتوحة.'
             };
-            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع'));
+            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع: ' + err.message));
         },
-        {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
+        {enableHighAccuracy: true, timeout: 20000, maximumAge: 0}
     );
 }
 

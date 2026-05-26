@@ -14,12 +14,35 @@ app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.permanent_session_lifetime = datetime.timedelta(hours=8)
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["30/minute"])
 
+def get_ip():
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers['X-Forwarded-For'].split(',')[0].strip()
+    return request.remote_addr or ''
+
+@app.before_request
+def validate_session():
+    if request.endpoint in ('login','static','admin_restore') or request.path.startswith('/static/'):
+        return
+    if 'user_id' not in session or 'session_id' not in session:
+        return
+    sess = get_session(session['session_id'])
+    if not sess or not sess['is_active']:
+        session.clear()
+        return redirect(url_for('login'))
+    update_session_activity(session['session_id'])
+
 @app.context_processor
 def inject_globals():
     locked = False
     if session.get('role') == 'admin':
         locked = get_setting('system_locked', '0') == '1'
-    return {'system_locked_global': locked}
+    return {
+        'system_locked_global': locked,
+        'now': ksa().strftime('%H:%M'),
+        'facility_lat': FACILITY_LOCATION[0],
+        'facility_lng': FACILITY_LOCATION[1],
+        'allowed_radius': ALLOWED_RADIUS,
+    }
 
 @app.errorhandler(404)
 def not_found(e):
@@ -65,16 +88,7 @@ def csrf_token():
         session['csrf_token'] = secrets.token_hex(16)
     return session['csrf_token']
 
-app.jinja_env.globals.update(csrf_token=csrf_token, get_user_by_id=get_user_by_id)
-
-@app.context_processor
-def inject_globals():
-    return {
-        'now': ksa().strftime('%H:%M'),
-        'facility_lat': FACILITY_LOCATION[0],
-        'facility_lng': FACILITY_LOCATION[1],
-        'allowed_radius': ALLOWED_RADIUS,
-    }
+app.jinja_env.globals.update(csrf_token=csrf_token, get_user_by_id=get_user_by_id, get_session_count=get_active_session_count, get_user_sessions=get_user_sessions)
 
 def build_report(date_str):
     amap     = get_report(date_str)
@@ -155,12 +169,22 @@ def login():
             db_run("UPDATE users SET device_uid=? WHERE id=?", (device_token, user['id']))
         if not user['password'].startswith('$2'):
             db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
+        # ── Session management ──
+        allow_multi = get_setting('allow_multi_session', '0') == '1'
+        if not allow_multi:
+            terminate_all_user_sessions(user['id'])
+        ua = request.headers.get('User-Agent', '')
+        browser, os_name, device_type = parse_user_agent(ua)
+        session_id = str(uuid.uuid4())
+        ip_addr = get_ip()
+        create_session(user['id'], session_id, ip_addr, ua, browser, os_name, device_type)
         session.clear()
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['full_name'] = user['full_name']
         session['role'] = user['role']
         session['user_avatar'] = user.get('avatar', '')
+        session['session_id'] = session_id
         session.permanent = True
         redirect_url = url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard')
         resp = make_response(render_template('login_loading.html', redirect_url=redirect_url))
@@ -170,6 +194,8 @@ def login():
 
 @app.route('/logout')
 def logout():
+    if 'session_id' in session:
+        terminate_session(session['session_id'])
     session.clear()
     return redirect(url_for('login'))
 
@@ -694,6 +720,67 @@ def admin_send_message():
         return redirect(url_for('admin_send_message'))
     return render_template('admin/send_message.html', soldiers=soldiers)
 
+# ── Session Management ──
+@app.route('/admin/sessions')
+@admin_required
+def admin_sessions():
+    all_sessions = get_all_sessions()
+    allow_multi = get_setting('allow_multi_session', '0') == '1'
+    return render_template('admin/sessions.html', sessions=all_sessions, allow_multi=allow_multi)
+
+@app.route('/admin/session/<session_id>/terminate', methods=['POST'])
+@admin_required
+def admin_terminate_session(session_id):
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_sessions'))
+    sess = get_session(session_id)
+    if sess:
+        terminate_session(session_id)
+        log_action(session['user_id'], 'terminate_session', sess['user_id'], f'إنهاء جلسة: {session_id[:12]}...')
+        flash('تم إنهاء الجلسة', 'success')
+    return redirect(url_for('admin_sessions'))
+
+@app.route('/admin/sessions/clear-user/<int:uid>', methods=['POST'])
+@admin_required
+def admin_clear_user_sessions(uid):
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_sessions'))
+    terminate_all_user_sessions(uid)
+    user = get_user_by_id(uid)
+    log_action(session['user_id'], 'clear_sessions', uid, f'مسح جلسات: {user["full_name"] if user else uid}')
+    flash('تم مسح جميع جلسات المستخدم', 'success')
+    return redirect(url_for('admin_sessions'))
+
+@app.route('/admin/sessions/force-logout/<int:uid>', methods=['POST'])
+@admin_required
+def admin_force_logout(uid):
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_sessions'))
+    terminate_all_user_sessions(uid)
+    reset_device_uid(uid)
+    user = get_user_by_id(uid)
+    log_action(session['user_id'], 'force_logout', uid, f'تسجيل خروج إجباري + فك أجهزة: {user["full_name"] if user else uid}')
+    flash(f'تم تسجيل خروج إجباري لـ {user["full_name"]} وفك جميع الأجهزة', 'success')
+    return redirect(url_for('admin_sessions'))
+
+@app.route('/admin/toggle-multi-session', methods=['POST'])
+@admin_required
+def admin_toggle_multi_session():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_sessions'))
+    cur = get_setting('allow_multi_session', '0')
+    new_val = '0' if cur == '1' else '1'
+    set_setting('allow_multi_session', new_val)
+    log_action(session['user_id'], 'toggle_multi_session', None, f'تعدد الجلسات: {"مسموح" if new_val=="1" else "ممنوع"}')
+    flash('تم ' + ('السماح' if new_val=='1' else 'منع') + ' بتعدد الجلسات', 'success')
+    return redirect(url_for('admin_sessions'))
+
+@app.route('/admin/attendance-errors')
+@admin_required
+def admin_attendance_errors():
+    errs = get_attendance_errors()
+    return render_template('admin/attendance_errors.html', errors=errs)
+
 # ── Employee ──
 @app.route('/employee')
 @login_required
@@ -725,29 +812,40 @@ def employee_check_out():
 
 def handle_attendance(action):
     user_id = session['user_id']
-    if get_setting('system_locked', '0') == '1':
-        return jsonify({'ok': False, 'msg': 'النظام مقفل من قبل الإدارة'}), 403
-    now = time.time()
-    last = session.get('last_att', 0)
-    if now - last < 3:
-        return jsonify({'ok': False, 'msg': 'الرجاء الانتظار 3 ثوانٍ بين كل محاولة'}), 429
-    data = request.get_json()
-    if not data:
-        return jsonify({'ok': False, 'msg': 'بيانات غير صالحة'}), 400
-    lat = data.get('latitude')
-    lng = data.get('longitude')
-    if lat is None or lng is None:
-        return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع'}), 400
-    dist = geodesic(FACILITY_LOCATION, (lat, lng)).meters
-    if dist > ALLOWED_RADIUS:
-        return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
-    ok, err = record_attendance(user_id, action, lat, lng, note)
-    if not ok:
-        return jsonify({'ok': False, 'msg': err}), 409
-    session['last_att'] = now
-    if os.getenv('GH_TOKEN'): threading.Thread(target=backup.do_backup, daemon=True).start()
-    verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
-    return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
+    try:
+        if get_setting('system_locked', '0') == '1':
+            return jsonify({'ok': False, 'msg': 'النظام مقفل من قبل الإدارة'}), 403
+        now_time = time.time()
+        last = session.get('last_att', 0)
+        if now_time - last < 3:
+            return jsonify({'ok': False, 'msg': 'الرجاء الانتظار 3 ثوانٍ بين كل محاولة'}), 429
+        data = request.get_json(silent=True)
+        if not data:
+            log_attendance_error(user_id, 'بيانات JSON فارغة', None, None)
+            return jsonify({'ok': False, 'msg': 'بيانات غير صالحة (تأكد من إرسال JSON صحيح)'}), 400
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+        if lat is None or lng is None:
+            log_attendance_error(user_id, 'إحداثيات GPS مفقودة', lat, lng)
+            return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع (تأكد من تفعيل GPS)'}), 400
+        try:
+            dist = geodesic(FACILITY_LOCATION, (float(lat), float(lng))).meters
+        except Exception as geo_err:
+            log_attendance_error(user_id, f'خطأ في حساب المسافة: {geo_err}', lat, lng)
+            return jsonify({'ok': False, 'msg': f'خطأ في حساب موقعك. حاول مرة أخرى.'}), 500
+        if dist > ALLOWED_RADIUS:
+            return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
+        note = data.get('note', '')
+        ok, err = record_attendance(user_id, action, lat, lng, note)
+        if not ok:
+            return jsonify({'ok': False, 'msg': err}), 409
+        session['last_att'] = now_time
+        if os.getenv('GH_TOKEN'): threading.Thread(target=backup.do_backup, daemon=True).start()
+        verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
+        return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
+    except Exception as e:
+        log_attendance_error(user_id, f'خطأ غير متوقع: {str(e)[:200]}', None, None)
+        return jsonify({'ok': False, 'msg': f'حدث خطأ في الخادم: {str(e)[:100]}. حاول مرة أخرى أو تواصل مع الإدارة.'}), 500
 
 @app.route('/employee/leave')
 @login_required

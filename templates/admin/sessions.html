@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}إدارة الجلسات{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-laptop ms-2"></i>إدارة الجلسات</h4>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-sliders ms-2"></i>إعدادات الجلسات</span>
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h6 class="mb-1">السماح بتعدد الجلسات</h6>
+                <small class="text-muted">السماح للمستخدم بالدخول من أكثر من جهاز في نفس الوقت</small>
+            </div>
+            <form method="POST" action="{{ url_for('admin_toggle_multi_session') }}" class="m-0">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn {% if allow_multi %}btn-success{% else %}btn-danger{% endif %} rounded-pill px-4">
+                    <i class="bi {% if allow_multi %}bi-check-circle{% else %}bi-x-circle{% endif %} ms-1"></i>
+                    {{ 'مسموح' if allow_multi else 'ممنوع' }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-activity ms-2"></i>الجلسات النشطة</span>
+        <span class="badge bg-info rounded-pill">{{ sessions|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>المستخدم</th>
+                        <th>الجهاز</th>
+                        <th>المتصفح</th>
+                        <th>نظام التشغيل</th>
+                        <th>نوع الجهاز</th>
+                        <th>IP</th>
+                        <th>تاريخ الدخول</th>
+                        <th>آخر نشاط</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                    <tr class="{% if not s.is_active %}text-muted{% endif %}">
+                        <td class="fw-semibold">{{ s.rank_title ~ ' / ' if s.rank_title }}{{ s.full_name }}</td>
+                        <td><code>{{ s.device_type or '—' }}</code></td>
+                        <td>{{ s.browser or '—' }}</td>
+                        <td>{{ s.os or '—' }}</td>
+                        <td>{{ s.device_type or '—' }}</td>
+                        <td><small>{{ s.ip_address or '—' }}</small></td>
+                        <td><small class="text-muted">{{ s.created_at }}</small></td>
+                        <td><small class="text-muted">{{ s.last_activity }}</small></td>
+                        <td>
+                            {% if s.is_active %}
+                            <span class="badge bg-success rounded-pill">نشط</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">منتهي</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.is_active and s.session_id != session.session_id %}
+                            <form method="POST" action="{{ url_for('admin_terminate_session', session_id=s.session_id) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('إنهاء هذه الجلسة؟')">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">لا توجد جلسات</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header"><span><i class="bi bi-exclamation-triangle ms-2"></i>إجراءات إجبارية</span></div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <form method="POST" action="{{ url_for('admin_sessions') }}" class="d-inline">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger w-100" disabled>
+                        <i class="bi bi-x-circle ms-1"></i> تسجيل خروج الجميع
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

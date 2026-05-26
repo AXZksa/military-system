@@ -164,6 +164,8 @@ def init_db():
         c.execute("""CREATE TABLE IF NOT EXISTS shifts_archive (id SERIAL PRIMARY KEY,shift_date TEXT,current_duty TEXT,username TEXT DEFAULT '',created_at TEXT)""")
         c.execute("""CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY,value TEXT NOT NULL DEFAULT '')""")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_log (id SERIAL PRIMARY KEY,admin_id INTEGER NOT NULL,action TEXT NOT NULL,target_id INTEGER,details TEXT,created_at TEXT NOT NULL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS sessions (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,session_id TEXT UNIQUE NOT NULL,ip_address TEXT DEFAULT '',user_agent TEXT DEFAULT '',browser TEXT DEFAULT '',os TEXT DEFAULT '',device_type TEXT DEFAULT '',created_at TEXT NOT NULL,last_activity TEXT NOT NULL,is_active INTEGER DEFAULT 1)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS attendance_errors (id SERIAL PRIMARY KEY,user_id INTEGER,error TEXT NOT NULL,latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,created_at TEXT NOT NULL)""")
         conn.commit(); _put_conn(conn)
     else:
         conn = _get_sqlite()
@@ -182,6 +184,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS shifts_archive (id INTEGER PRIMARY KEY AUTOINCREMENT,shift_date TEXT,current_duty TEXT,username TEXT DEFAULT '',created_at TEXT);
             CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY,value TEXT NOT NULL DEFAULT '');
             CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT,admin_id INTEGER NOT NULL,action TEXT NOT NULL,target_id INTEGER,details TEXT,created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,session_id TEXT UNIQUE NOT NULL,ip_address TEXT DEFAULT '',user_agent TEXT DEFAULT '',browser TEXT DEFAULT '',os TEXT DEFAULT '',device_type TEXT DEFAULT '',created_at TEXT NOT NULL,last_activity TEXT NOT NULL,is_active INTEGER DEFAULT 1);
+            CREATE TABLE IF NOT EXISTS attendance_errors (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,error TEXT NOT NULL,latitude REAL,longitude REAL,created_at TEXT NOT NULL);
         ''')
         conn.commit()
 
@@ -368,6 +372,7 @@ def set_setting(key, value):
 def init_settings():
     db_run("INSERT INTO system_settings (key,value) VALUES ('system_locked','0') ON CONFLICT(key) DO NOTHING")
     db_run("INSERT INTO system_settings (key,value) VALUES ('db_version','3') ON CONFLICT(key) DO NOTHING")
+    db_run("INSERT INTO system_settings (key,value) VALUES ('allow_multi_session','0') ON CONFLICT(key) DO NOTHING")
 
 # ────────────────────────────────────────────────
 #  Leaves
@@ -497,6 +502,89 @@ def add_history(user_id, note):
 
 def delete_history(hid):
     db_run("DELETE FROM history_records WHERE id=?", (hid,))
+
+# ────────────────────────────────────────────────
+#  Sessions
+# ────────────────────────────────────────────────
+def create_session(user_id, session_id, ip_address='', user_agent='', browser='', os='', device_type=''):
+    now = ksa_str()
+    db_run("INSERT INTO sessions (user_id,session_id,ip_address,user_agent,browser,os,device_type,created_at,last_activity) VALUES (?,?,?,?,?,?,?,?,?)",
+           (user_id, session_id, ip_address, user_agent, browser, os, device_type, now, now))
+
+def get_session(session_id):
+    r = db_get("SELECT id,user_id,session_id,ip_address,user_agent,browser,os,device_type,created_at,last_activity,is_active FROM sessions WHERE session_id=?", (session_id,))
+    if r:
+        cols = ['id','user_id','session_id','ip_address','user_agent','browser','os','device_type','created_at','last_activity','is_active']
+        return dict(zip(cols, r[0]))
+    return None
+
+def update_session_activity(session_id):
+    db_run("UPDATE sessions SET last_activity=? WHERE session_id=?", (ksa_str(), session_id))
+
+def terminate_session(session_id):
+    db_run("UPDATE sessions SET is_active=0 WHERE session_id=?", (session_id,))
+
+def terminate_all_user_sessions(user_id, keep_current=None):
+    if keep_current:
+        db_run("UPDATE sessions SET is_active=0 WHERE user_id=? AND session_id!=?", (user_id, keep_current))
+    else:
+        db_run("UPDATE sessions SET is_active=0 WHERE user_id=?", (user_id,))
+
+def get_user_sessions(user_id):
+    rows = db_get("SELECT id,user_id,session_id,ip_address,user_agent,browser,os,device_type,created_at,last_activity,is_active FROM sessions WHERE user_id=? ORDER BY id DESC", (user_id,))
+    cols = ['id','user_id','session_id','ip_address','user_agent','browser','os','device_type','created_at','last_activity','is_active']
+    return [dict(zip(cols, r)) for r in rows]
+
+def get_all_sessions(limit=100):
+    rows = db_get("SELECT s.id,s.user_id,u.full_name,u.rank_title,s.session_id,s.ip_address,s.user_agent,s.browser,s.os,s.device_type,s.created_at,s.last_activity,s.is_active FROM sessions s JOIN users u ON s.user_id=u.id ORDER BY s.last_activity DESC LIMIT ?", (limit,))
+    cols = ['id','user_id','full_name','rank_title','session_id','ip_address','user_agent','browser','os','device_type','created_at','last_activity','is_active']
+    return [dict(zip(cols, r)) for r in rows]
+
+def get_active_session_count(user_id):
+    r = db_get("SELECT COUNT(*) FROM sessions WHERE user_id=? AND is_active=1", (user_id,))
+    return r[0][0] if r else 0
+
+def parse_user_agent(ua):
+    browser = 'غير معروف'
+    os_name = 'غير معروف'
+    device_type = 'غير معروف'
+    ua_lower = (ua or '').lower()
+    if 'chrome' in ua_lower and 'edg' not in ua_lower and 'opr' not in ua_lower:
+        browser = 'Chrome'
+    elif 'firefox' in ua_lower:
+        browser = 'Firefox'
+    elif 'safari' in ua_lower and 'chrome' not in ua_lower:
+        browser = 'Safari'
+    elif 'edg' in ua_lower:
+        browser = 'Edge'
+    elif 'opr' in ua_lower or 'opera' in ua_lower:
+        browser = 'Opera'
+    elif 'msie' in ua_lower or 'trident' in ua_lower:
+        browser = 'Internet Explorer'
+    if 'windows' in ua_lower:
+        os_name = 'Windows'; device_type = 'كمبيوتر'
+    elif 'mac os' in ua_lower or 'macintosh' in ua_lower:
+        os_name = 'macOS'; device_type = 'كمبيوتر'
+    elif 'linux' in ua_lower:
+        os_name = 'Linux'; device_type = 'كمبيوتر'
+    elif 'android' in ua_lower:
+        os_name = 'Android'; device_type = 'جوال'
+        if ua and ('tablet' in ua_lower or 'ipad' in ua_lower):
+            device_type = 'جهاز لوحي'
+    elif 'ios' in ua_lower or 'iphone' in ua_lower:
+        os_name = 'iOS'; device_type = 'جوال'
+    elif 'ipad' in ua_lower:
+        os_name = 'iOS'; device_type = 'جهاز لوحي'
+    return browser, os_name, device_type
+
+def log_attendance_error(user_id, error_msg, lat=None, lng=None):
+    db_run("INSERT INTO attendance_errors (user_id,error,latitude,longitude,created_at) VALUES (?,?,?,?,?)",
+           (user_id, error_msg, lat, lng, ksa_str()))
+
+def get_attendance_errors(limit=50):
+    rows = db_get("SELECT ae.id,u.full_name,ae.error,ae.latitude,ae.longitude,ae.created_at FROM attendance_errors ae LEFT JOIN users u ON ae.user_id=u.id ORDER BY ae.id DESC LIMIT ?", (limit,))
+    cols = ['id','full_name','error','latitude','longitude','created_at']
+    return [dict(zip(cols, r)) for r in rows]
 
 # ────────────────────────────────────────────────
 #  Circulars
