@@ -1,4 +1,4 @@
-import os, secrets, uuid, time
+import os, secrets, uuid, time, random
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from geopy.distance import geodesic
 from database import *
@@ -11,6 +11,10 @@ FACILITY_LOCATION = (
     float(os.getenv('FACILITY_LNG', '43.4831471'))
 )
 ALLOWED_RADIUS = float(os.getenv('ALLOWED_RADIUS', '50'))
+
+# SMS (Unifonic)
+UNIFONIC_APPSID = os.getenv('UNIFONIC_APPSID', '')
+UNIFONIC_SENDER = os.getenv('UNIFONIC_SENDER', '')
 
 def login_required(f):
     from functools import wraps
@@ -80,6 +84,26 @@ def build_report(date_str):
     return {'present': present, 'absent': absent, 'on_leave': on_leave, 'no_out': no_out, 'body': body}
 
 # ── Auth ──
+
+def send_sms(phone, code):
+    phone = phone.strip()
+    if phone.startswith('0'): phone = '966' + phone[1:]
+    msg = f"رمز التحقق الخاص بك هو: {code}\nمنظومة توثيق الحركة الميدانية"
+    if UNIFONIC_APPSID:
+        import requests
+        try:
+            r = requests.post('https://api.unifonic.com/rest/Messages/Send', data={
+                'AppSid': UNIFONIC_APPSID,
+                'Recipient': phone,
+                'Body': msg,
+                'SenderID': UNIFONIC_SENDER or '',
+            }, timeout=10)
+            return r.ok
+        except: return False
+    else:
+        print(f"[SMS to {phone}] Code: {code}")
+        return True
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -101,19 +125,51 @@ def login():
                 return render_template('login.html')
         elif device_fp:
             set_device_uid(user['id'], device_fp)
+        if user['role'] == 'admin' and user.get('phone_number'):
+            code = str(random.randint(100000, 999999))
+            session['2fa_user'] = {
+                'id': user['id'], 'username': user['username'],
+                'full_name': user['full_name'], 'role': user['role'],
+                'phone': user['phone_number'], 'code': code,
+                'expires': time.time() + 180
+            }
+            send_sms(user['phone_number'], code)
+            flash('تم إرسال رمز التحقق إلى جوال القائد.', 'info')
+            return redirect(url_for('verify_2fa'))
+        if not user['password'].startswith('$2'):
+            db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
         session.clear()
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['full_name'] = user['full_name']
         session['role'] = user['role']
         session.permanent = True
-        if not user['password'].startswith('$2'):
-            db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
-        if user['role'] == 'admin':
-            return redirect(url_for('admin_dashboard'))
-        else:
-            return redirect(url_for('employee_dashboard'))
+        return redirect(url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard'))
     return render_template('login.html')
+
+@app.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    u = session.get('2fa_user')
+    if not u:
+        return redirect(url_for('login'))
+    if time.time() > u['expires']:
+        session.pop('2fa_user', None)
+        flash('انتهت صلاحية رمز التحقق. حاول مرة أخرى.', 'danger')
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        entered = request.form.get('code', '').strip()
+        if entered == str(u['code']):
+            session.clear()
+            session['user_id'] = u['id']
+            session['username'] = u['username']
+            session['full_name'] = u['full_name']
+            session['role'] = u['role']
+            session.permanent = True
+            flash('تم التحقق بنجاح. مرحباً قائد المنظومة.', 'success')
+            return redirect(url_for('admin_dashboard'))
+        flash('رمز التحقق غير صحيح. حاول مرة أخرى.', 'danger')
+        return render_template('verify_2fa.html')
+    return render_template('verify_2fa.html', phone_mask=u['phone'][:4] + '****' + u['phone'][-2:])
 
 @app.route('/logout')
 def logout():
@@ -562,6 +618,7 @@ def employee_notifications():
 init_db()
 if not get_user('admn'):
     add_user('admn', '1000', 'القائد العام', 'admin')
+    set_admin_phone('admn', os.getenv('ADMIN_PHONE', '0503077519'))
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

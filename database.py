@@ -326,6 +326,9 @@ def get_soldiers():
     rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee'")
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
+def set_admin_phone(username, phone):
+    db_run("UPDATE users SET phone_number=? WHERE username=? AND role='admin'", (phone, username))
+
 def delete_user(uid):
     db_run("DELETE FROM users WHERE id=?", (uid,))
 
