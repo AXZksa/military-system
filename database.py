@@ -238,17 +238,17 @@ def get_deleted_soldiers():
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
 def add_user(u, p, n, role='employee', rank='', phone=''):
-    ok, msg = validate_username(u)
-    if not ok: return False, msg
-    ok, msg = validate_password(p)
-    if not ok: return False, msg
-    ok, msg = validate_full_name(n)
-    if not ok: return False, msg
+    ok, uname = validate_username(u)
+    if not ok: return False, uname
+    ok, pwd = validate_password(p)
+    if not ok: return False, pwd
+    ok, name = validate_full_name(n)
+    if not ok: return False, name
     try:
         pw = hash_password(p)
         now = ksa_str()
         db_run("INSERT INTO users (username,password,full_name,role,rank_title,phone_number,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
-               (msg, pw, msg, role, rank.strip(), phone.strip(), now, now))
+               (uname, pw, name, role, rank.strip(), phone.strip(), now, now))
         return True, "تمت الإضافة بنجاح"
     except Exception as e:
         err = str(e).lower()
