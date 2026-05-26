@@ -3,12 +3,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
-    <span class="badge bg-dark px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
+    <span class="badge bg-tertiary px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a4a2a,#2e7d44);">
+        <div class="card stat-card stat-card-fill-green">
             <div class="card-body">
                 <i class="bi bi-people stat-icon"></i>
                 <h6>إجمالي القوة</h6>
@@ -17,7 +17,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a6b3c,#27ae60);">
+        <div class="card stat-card stat-card-green">
             <div class="card-body">
                 <i class="bi bi-check-circle stat-icon"></i>
                 <h6>حاضر اليوم</h6>
@@ -26,7 +26,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a5c30,#27ae60);">
+        <div class="card stat-card stat-card-blue">
             <div class="card-body">
                 <i class="bi bi-airplane stat-icon"></i>
                 <h6>إجازة</h6>
@@ -35,7 +35,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#7a1a1a,#e74c3c);">
+        <div class="card stat-card stat-card-red">
             <div class="card-body">
                 <i class="bi bi-x-circle stat-icon"></i>
                 <h6>غائب</h6>
@@ -47,7 +47,7 @@
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-dark" style="background:linear-gradient(135deg,#f9e479,#f1c40f);">
+        <div class="card stat-card stat-card-orange">
             <div class="card-body">
                 <i class="bi bi-question-circle stat-icon"></i>
                 <h6>بدون خروج</h6>
@@ -56,7 +56,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white stat-card-subtle">
+        <div class="card stat-card stat-card-gold">
             <div class="card-body">
                 <i class="bi bi-inbox stat-icon"></i>
                 <h6>طلبات معلقة</h6>
@@ -65,7 +65,7 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a4a2a,#2e7d44);">
+        <div class="card stat-card stat-card-green">
             <div class="card-body">
                 <i class="bi bi-bell stat-icon"></i>
                 <h6>إشعارات</h6>
@@ -75,7 +75,7 @@
     </div>
     <div class="col-6 col-md-3">
         <a href="{{ url_for('admin_reports') }}" class="text-decoration-none">
-            <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a5c30,#2ecc71);">
+            <div class="card stat-card stat-card-blue">
                 <div class="card-body">
                     <i class="bi bi-file-text stat-icon"></i>
                     <h6>تقرير مفصل</h6>

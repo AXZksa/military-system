@@ -7,7 +7,7 @@
             <i class="bi bi-shield-fill-check"></i>
         </div>
         <div class="text-center">
-            <h2 class="text-gold">منظومة توثيق الحركة الميدانية</h2>
+            <h2>منظومة توثيق الحركة الميدانية</h2>
             <p class="subtitle">القيادة العامة — دخول موحّد</p>
         </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -23,30 +23,24 @@
             <div class="mb-3">
                 <label class="form-label">اسم المستخدم</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-2 border-e-0"><i class="bi bi-person text-gold"></i></span>
-                    <input type="text" name="username" class="form-control border-2" required autofocus>
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" name="username" class="form-control" required autofocus>
                 </div>
             </div>
             <div class="mb-4">
                 <label class="form-label">كلمة المرور</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-2 border-e-0"><i class="bi bi-lock text-gold"></i></span>
-                    <input type="password" name="password" class="form-control border-2" required>
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" name="password" class="form-control" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-gold btn-lg w-100">
+            <button type="submit" class="btn btn-primary btn-lg w-100">
                 <i class="bi bi-box-arrow-in-left ms-1"></i> دخول
             </button>
         </form>
-        <div class="text-center login-footer-text">
+        <div class="login-footer-text">
             ⚠️ هذه المنظومة مسجلة ومراقبة — جميع العمليات موثّقة
         </div>
     </div>
 </div>
-<style>
-.input-group-text { border-radius: 0 10px 10px 0 !important; }
-.input-group .form-control { border-radius: 10px 0 0 10px !important; }
-.input-group .form-control:focus { border-color: var(--gold) !important; }
-.text-gold { color: var(--gold); }
-</style>
 {% endblock %}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,12 +18,14 @@
             </button>
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="bi bi-shield-fill-check"></i>
-                <span class="d-none d-sm-inline">منظومة توثيق الحركة الميدانية</span>
-                <span class="d-sm-none">المنظومة</span>
+                <span>منظومة توثيق الحركة الميدانية</span>
             </a>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-light small d-none d-md-inline">{{ session.full_name }}</span>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
+                <span class="text-secondary small d-none d-md-inline">{{ session.full_name }}</span>
+                <button class="btn-icon" id="themeToggle" title="تبديل السمة">
+                    <i class="bi bi-moon-stars"></i>
+                </button>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm px-3">
                     <i class="bi bi-box-arrow-left"></i>
                 </a>
             </div>
@@ -33,7 +35,7 @@
     <div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="sidebar" data-bs-backdrop="false">
         <div class="offcanvas-header">
             <h5 class="mb-0"><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0">
             <div class="sidebar-user-card">
@@ -132,7 +134,7 @@
                 {% endif %}
             </ul>
             <div class="mt-auto p-3 border-top border-secondary border-opacity-10">
-                <small class="text-secondary d-block text-center">جميع الحقوق محفوظة &copy; 2026</small>
+                <small class="text-muted d-block text-center">جميع الحقوق محفوظة &copy; 2026</small>
             </div>
         </div>
     </div>
@@ -145,7 +147,7 @@
             <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2">
                 <i class="bi {% if category=='success' %}bi-check-circle{% elif category=='danger' %}bi-x-circle{% elif category=='warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
                 {{ message }}
-                <button type="button" class="btn-close me-auto" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             {% endfor %}
             {% endif %}
@@ -154,8 +156,6 @@
         </div>
     </main>
     <style>
-        .btn-outline-gold { color: var(--gold); border: 1px solid var(--gold); background: transparent; }
-        .btn-outline-gold:hover { background: var(--gold); color: var(--green-900); }
         @media (min-width: 992px) {
             .sidebar.offcanvas { transform: none !important; visibility: visible !important; }
             .sidebar .offcanvas-header .btn-close { display: none; }
@@ -166,6 +166,21 @@
     {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+    (function() {
+        var html = document.documentElement;
+        var saved = localStorage.getItem('theme');
+        if (saved) html.setAttribute('data-theme', saved);
+        var btn = document.getElementById('themeToggle');
+        if (btn) btn.addEventListener('click', function() {
+            var cur = html.getAttribute('data-theme');
+            var next = cur === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            this.querySelector('i').className = next === 'dark' ? 'bi bi-moon-stars' : 'bi bi-sun';
+        });
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
