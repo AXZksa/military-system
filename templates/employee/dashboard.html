@@ -1,61 +1,73 @@
 {% extends "base.html" %}
 {% block title %}الرئيسية{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-md-6 mb-4">
+<h4 class="fw-bold mb-4"><i class="bi bi-house ms-2"></i>الرئيسية</h4>
+
+<div class="row g-3">
+    <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-body text-center">
-                <i class="bi bi-person-circle fs-1 text-primary"></i>
-                <h4 class="mt-2">{{ user.full_name }}</h4>
+            <div class="card-body text-center py-4">
+                <div class="avatar-lg mx-auto mb-3" style="width:72px;height:72px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--accent-green);">
+                    <i class="bi bi-person fs-2" style="color:var(--accent-green);"></i>
+                </div>
+                <h5 class="fw-bold">{{ user.full_name }}</h5>
                 <p class="text-muted">{{ user.rank_title or 'عسكري' }}</p>
-                <div class="d-flex justify-content-center gap-3 mt-3">
-                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success btn-lg">
-                        <i class="bi bi-check-circle"></i> تسجيل حضور
+                <div class="d-flex justify-content-center gap-2 mt-3">
+                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success rounded-pill px-4 py-2 fw-bold">
+                        <i class="bi bi-check-circle ms-1"></i> حضور
                     </a>
-                    <a href="{{ url_for('employee_leave') }}" class="btn btn-info btn-lg">
-                        <i class="bi bi-airplane"></i> رخصتي
+                    <a href="{{ url_for('employee_leave') }}" class="btn btn-info rounded-pill px-4 py-2 fw-bold text-white">
+                        <i class="bi bi-airplane ms-1"></i> رخصتي
                     </a>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
+    <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history ms-2"></i>حضور اليوم</h5></div>
+            <div class="card-header"><span><i class="bi bi-clock-history ms-2"></i>حضور اليوم</span></div>
             <div class="card-body">
                 {% if attendance %}
                 {% for act, ts in attendance %}
                 <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
-                    <span>{% if act == 'check_in' %}🟢 دخول{% else %}🔴 خروج{% endif %}</span>
-                    <span>{{ ts[11:16] }}</span>
+                    <span class="fw-semibold">{% if act == 'check_in' %}<i class="bi bi-check-circle-fill text-success ms-1"></i>دخول{% else %}<i class="bi bi-x-circle-fill text-danger ms-1"></i>خروج{% endif %}</span>
+                    <span dir="ltr" class="text-muted">{{ ts[11:16] }}</span>
                 </div>
                 {% endfor %}
                 {% else %}
-                <p class="text-muted mb-0">لم يتم تسجيل حضور اليوم.</p>
+                <div class="text-center py-3">
+                    <i class="bi bi-clock fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">لم يتم تسجيل حضور اليوم.</p>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-airplane ms-2"></i>الرخصة</h5></div>
+            <div class="card-header"><span><i class="bi bi-airplane ms-2"></i>الرخصة</span></div>
             <div class="card-body">
                 {% if lv %}
-                <p class="text-info">🟢 مرخوص</p>
-                <p>المدة: {{ lv.label }}<br>من: {{ lv.start }}<br>إلى: {{ lv.end }}</p>
+                <div class="alert alert-info d-flex align-items-center gap-2 py-2">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <div>
+                        <strong>مرخوص</strong><br>
+                        <small>{{ lv.label }} | من: {{ lv.start }} إلى: {{ lv.end }}</small>
+                    </div>
+                </div>
                 {% else %}
                 <p class="text-muted">غير مرخوص</p>
-                <a href="{{ url_for('employee_leave') }}" class="btn btn-primary btn-sm">طلب رخصة</a>
+                <a href="{{ url_for('employee_leave') }}" class="btn btn-primary rounded-pill btn-sm">طلب رخصة</a>
                 {% endif %}
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
+    <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-megaphone ms-2"></i>آخر تعميم</h5></div>
+            <div class="card-header"><span><i class="bi bi-megaphone ms-2"></i>آخر تعميم</span></div>
             <div class="card-body">
                 {% if circular %}
                 <p>{{ circular[0] }}</p>
@@ -68,19 +80,15 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ url_for('employee_report') }}" class="btn btn-outline-danger"><i class="bi bi-exclamation-circle"></i> بلاغ عاجل</a>
-                    <a href="{{ url_for('employee_message_leader') }}" class="btn btn-outline-primary"><i class="bi bi-chat"></i> راسل القائد</a>
-                    <a href="{{ url_for('employee_notifications') }}" class="btn btn-outline-warning position-relative">
-                        <i class="bi bi-bell"></i> الإشعارات
-                        {% if unread %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread }}</span>{% endif %}
-                    </a>
-                </div>
-            </div>
+<div class="card mt-3">
+    <div class="card-body">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('employee_report') }}" class="btn btn-outline-danger rounded-pill"><i class="bi bi-exclamation-circle ms-1"></i> بلاغ عاجل</a>
+            <a href="{{ url_for('employee_message_leader') }}" class="btn btn-outline-primary rounded-pill"><i class="bi bi-chat ms-1"></i> راسل القائد</a>
+            <a href="{{ url_for('employee_notifications') }}" class="btn btn-outline-warning rounded-pill position-relative">
+                <i class="bi bi-bell ms-1"></i> الإشعارات
+                {% if unread %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread }}</span>{% endif %}
+            </a>
         </div>
     </div>
 </div>

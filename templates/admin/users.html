@@ -1,43 +1,56 @@
 {% extends "base.html" %}
 {% block title %}إدارة العساكر{% endblock %}
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-people ms-2"></i>إدارة العساكر</h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin_add_user') }}" class="btn btn-success rounded-pill px-3"><i class="bi bi-plus-lg"></i> إضافة</a>
+        <button class="btn btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i> استعلام</button>
+    </div>
+</div>
+
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-people ms-2"></i>بيان القوة <span class="badge bg-primary">{{ soldiers|length }}</span></h5>
-        <div>
-            <a href="{{ url_for('admin_add_user') }}" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> إضافة</a>
-            <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i> استعلام</button>
-        </div>
+    <div class="card-header">
+        <span><i class="bi bi-list-ul ms-2"></i>بيان القوة — <span class="badge bg-primary rounded-pill">{{ soldiers|length }}</span></span>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-dark">
-                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th></th></tr>
+                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th>الجهاز</th><th></th></tr>
                 </thead>
                 <tbody>
                     {% for sid, nm, un, blk, rank, phone in soldiers %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td>{{ rank or '—' }}</td>
-                        <td>{{ nm }}</td>
-                        <td><code>{{ un }}</code></td>
-                        <td dir="ltr">{{ phone or '—' }}</td>
+                        <td><span class="badge badge-rank px-3 py-2">{{ rank or '—' }}</span></td>
+                        <td class="fw-semibold">{{ nm }}</td>
+                        <td><code dir="ltr">{{ un }}</code></td>
+                        <td dir="ltr" class="text-muted small">{{ phone or '—' }}</td>
                         <td>
-                            {% if blk %}<span class="badge bg-danger">موقوف</span>
-                            {% else %}<span class="badge bg-success">نشط</span>{% endif %}
+                            {% if blk %}<span class="badge bg-danger bg-opacity-75 rounded-pill px-3">موقوف</span>
+                            {% else %}<span class="badge bg-success rounded-pill px-3">نشط</span>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill {% if user_device_map and user_device_map.get(sid) %}bg-info{% else %}bg-secondary{% endif %}">
+                                {% if user_device_map and user_device_map.get(sid) %}مرتبط{% else %}غير مرتبط{% endif %}
+                            </span>
                         </td>
                         <td class="text-nowrap">
-                            <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                            <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm btn-warning rounded-pill" title="تعديل"><i class="bi bi-pencil"></i></a>
                             <form method="POST" action="{{ url_for('admin_toggle_block', uid=sid) }}" class="d-inline">
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm {% if blk %}btn-success{% else %}btn-secondary{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
+                                <button class="btn btn-sm rounded-pill {% if blk %}btn-success{% else %}btn-secondary{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
                                     <i class="bi {% if blk %}bi-unlock{% else %}bi-lock{% endif %}"></i>
                                 </button>
                             </form>
+                            <form method="POST" action="{{ url_for('admin_reset_device', uid=sid) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-info rounded-pill" title="إعادة تعيين الجهاز"><i class="bi bi-phone"></i></button>
+                            </form>
                             <form method="POST" action="{{ url_for('admin_delete_user', uid=sid) }}" class="d-inline" onsubmit="return confirm('تأكيد حذف {{ nm }}؟')">
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-danger rounded-pill"><i class="bi bi-trash"></i></button>
                             </form>
                         </td>
                     </tr>
@@ -48,16 +61,16 @@
     </div>
 </div>
 
-<div class="modal fade" id="searchModal">
-    <div class="modal-dialog">
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
         <form method="POST" action="{{ url_for('admin_search_user') }}">
             <div class="modal-content">
-                <div class="modal-header"><h5>استعلام عن عسكري</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header border-0"><h5 class="fw-bold"><i class="bi bi-search ms-2"></i>استعلام عن عسكري</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <input type="text" name="query" class="form-control form-control-lg" placeholder="أدخل اليوزر" required autofocus>
+                    <input type="text" name="query" class="form-control form-control-lg" placeholder="أدخل اليوزر..." required autofocus>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">بحث</button>
+                <div class="modal-footer border-0">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-search ms-1"></i> بحث</button>
                 </div>
             </div>
         </form>

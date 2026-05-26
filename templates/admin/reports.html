@@ -1,14 +1,36 @@
 {% extends "base.html" %}
 {% block title %}التقارير{% endblock %}
 {% block content %}
-<div class="card mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-file-text ms-2"></i>التقارير</h4>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary rounded-pill btn-sm px-3" onclick="window.print()">
+            <i class="bi bi-printer ms-1"></i> طباعة
+        </button>
+        <a href="{{ url_for('admin_export_excel', date_str=dt) }}" class="btn btn-success rounded-pill btn-sm px-3">
+            <i class="bi bi-file-earmark-excel ms-1"></i> إكسيل
+        </a>
+        {% if rpt.present or rpt.absent or rpt.on_leave %}
+        <span class="badge bg-tertiary px-3 py-2 d-flex align-items-center gap-1">
+            <i class="bi bi-clock"></i> {{ now }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4" id="reportCard">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-file-text ms-2"></i>تقرير اليوم: {{ dt }}</h5>
-        <span class="badge bg-secondary">الوقت: {{ now }}</span>
+        <span><i class="bi bi-calendar ms-2"></i>تقرير اليوم: {{ dt }}</span>
+        <div class="d-flex gap-2 small text-muted">
+            <span><i class="bi bi-check-circle text-success"></i> حاضر {{ rpt.present }}</span>
+            <span><i class="bi bi-x-circle text-danger"></i> غائب {{ rpt.absent }}</span>
+            <span><i class="bi bi-airplane text-info"></i> إجازة {{ rpt.on_leave }}</span>
+            <span><i class="bi bi-question-circle text-warning"></i> بدون خروج {{ rpt.no_out }}</span>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" id="reportTable">
                 <thead class="table-dark">
                     <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
                 </thead>
@@ -19,15 +41,33 @@
 </div>
 
 <div class="card">
-    <div class="card-header"><h5 class="mb-0"><i class="bi bi-archive ms-2"></i>التقارير المؤرشفة</h5></div>
+    <div class="card-header"><span><i class="bi bi-archive ms-2"></i>التقارير المؤرشفة</span></div>
     <div class="card-body">
-        <div class="row">
+        <div class="row g-2">
             {% for d in dates %}
-            <div class="col-md-3 col-6 mb-2">
-                <a href="{{ url_for('admin_report_date', date_str=d) }}" class="btn btn-outline-secondary w-100">{{ d }}</a>
+            <div class="col-4 col-md-2">
+                <a href="{{ url_for('admin_report_date', date_str=d) }}" class="btn btn-outline-secondary w-100 rounded-pill">{{ d }}</a>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+    body { background: #fff !important; }
+    .topbar, .sidebar, .sidebar-overlay, .btn, .card-header .d-flex.gap-2,
+    .card:last-child, .alert { display: none !important; }
+    .main-content { margin: 0 !important; padding: 0 !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .card-header .badge { display: none !important; }
+    .table th { color: #000 !important; }
+    .table td { color: #000 !important; }
+    .table-warning-row td { color: #856404 !important; }
+    .table-danger-row td { color: #721c24 !important; }
+    .table-info-row td { color: #0c5460 !important; }
+}
+</style>
 {% endblock %}

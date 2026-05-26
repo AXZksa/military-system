@@ -1,7 +1,10 @@
-import os, secrets, uuid
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import os, secrets, uuid, time, base64, html, io
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
 from geopy.distance import geodesic
 from database import *
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -55,32 +58,43 @@ def build_report(date_str):
     present = absent = on_leave = no_out = 0
     body = ""
     for sid, nm, _, _, rank, phone in soldiers:
-        nm_full = f"{rank} / {nm}" if rank else nm
+        nm_e = html.escape(nm)
+        rank_e = html.escape(rank) if rank else ''
+        nm_full = f"{rank_e} / {nm_e}" if rank_e else nm_e
         lv = get_leave(sid)
-        note = f" [{amap[sid]['note']}]" if sid in amap and amap[sid]['note'] else ''
+        note_raw = amap[sid]['note'] if sid in amap and amap[sid]['note'] else ''
+        note = f" <small class='text-muted'>({html.escape(note_raw)})</small>" if note_raw else ''
         if sid in amap:
-            ci = amap[sid]['check_in']  or '---'
-            co = amap[sid]['check_out'] or '---'
+            ci = html.escape(amap[sid]['check_in']  or '---')
+            co = html.escape(amap[sid]['check_out'] or '---')
+            loc_in = amap[sid].get('loc','')
+            loc_out = amap[sid].get('loc_out','')
+            loc_in_html = f'<a href="https://maps.google.com/?q={loc_in}" target="_blank" class="text-muted small" title="موقع الدخول"><i class="bi bi-geo-alt"></i></a>' if loc_in else ''
+            loc_out_html = f'<a href="https://maps.google.com/?q={loc_out}" target="_blank" class="text-muted small" title="موقع الخروج"><i class="bi bi-geo-alt"></i></a>' if loc_out else ''
             if amap[sid]['check_in'] and not amap[sid]['check_out']:
-                body += f"<tr class=\"table-warning\"><td>{nm_full}{note}</td><td>{ci}</td><td>---</td><td><span class=\"badge bg-warning\">بدون خروج</span></td></tr>"
+                body += f"<tr class=\"table-warning-row\"><td>{nm_full}{note}</td><td>{ci} {loc_in_html}</td><td>---</td><td><span class=\"badge bg-warning\">بدون خروج</span></td></tr>"
                 no_out += 1
             else:
-                body += f"<tr><td>{nm_full}{note}</td><td>{ci}</td><td>{co}</td><td><span class=\"badge bg-success\">مكتمل</span></td></tr>"
+                body += f"<tr><td>{nm_full}{note}</td><td>{ci} {loc_in_html}</td><td>{co} {loc_out_html}</td><td><span class=\"badge bg-success\">مكتمل</span></td></tr>"
             present += 1
         elif lv:
-            body += f"<tr class=\"table-info\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {lv['label']} تنتهي: {lv['end']}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
+            label_e = html.escape(lv['label'])
+            end_e = html.escape(lv['end'])
+            body += f"<tr class=\"table-info-row\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {label_e} تنتهي: {end_e}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
             on_leave += 1
         else:
-            body += f"<tr class=\"table-danger\"><td>{nm_full}</td><td colspan=\"2\">---</td><td><span class=\"badge bg-danger\">غائب</span></td></tr>"
+            body += f"<tr class=\"table-danger-row\"><td>{nm_full}</td><td colspan=\"2\">---</td><td><span class=\"badge bg-danger\">غائب</span></td></tr>"
             absent += 1
     return {'present': present, 'absent': absent, 'on_leave': on_leave, 'no_out': no_out, 'body': body}
 
 # ── Auth ──
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         password = request.form.get('password', '')
+        device_fp = request.form.get('device_fp', '')
         user = get_user(username)
         if not user or not check_password(user['password'], password):
             flash('بيانات الدخول غير صحيحة', 'danger')
@@ -88,18 +102,28 @@ def login():
         if user['is_blocked']:
             flash('هذا الحساب موقوف. تواصل مع القائد.', 'danger')
             return render_template('login.html')
+        if user['device_uid']:
+            devs = user['device_uid'].split(',')
+            if device_fp:
+                if device_fp not in devs:
+                    if len(devs) < 2:
+                        add_device_uid(user['id'], device_fp)
+                    else:
+                        add_security_alert(user['id'], 'جهاز غير معروف',
+                            f"محاولة دخول من جهاز جديد. البصمة: {device_fp[:30]}...")
+                        flash('جهاز غير معروف. تم تسجيل بلاغ أمني.', 'danger')
+                        return render_template('login.html')
+        elif device_fp:
+            add_device_uid(user['id'], device_fp)
+        if not user['password'].startswith('$2'):
+            db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
         session.clear()
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['full_name'] = user['full_name']
         session['role'] = user['role']
         session.permanent = True
-        if not user['password'].startswith('$2'):
-            db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
-        if user['role'] == 'admin':
-            return redirect(url_for('admin_dashboard'))
-        else:
-            return redirect(url_for('employee_dashboard'))
+        return redirect(url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard'))
     return render_template('login.html')
 
 @app.route('/logout')
@@ -131,12 +155,19 @@ def admin_dashboard():
 @admin_required
 def admin_users():
     soldiers = get_soldiers()
-    return render_template('admin/users.html', soldiers=soldiers)
+    device_map = {}
+    for sid, _, _, _, _, _ in soldiers:
+        u = get_user_by_id(sid)
+        if u and u.get('device_uid'):
+            device_map[sid] = True
+    return render_template('admin/users.html', soldiers=soldiers, user_device_map=device_map)
 
 @app.route('/admin/users/add', methods=['GET','POST'])
 @admin_required
 def admin_add_user():
     if request.method == 'POST':
+        if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+            flash('خطأ في التحقق', 'danger'); return render_template('admin/user_form.html', user=None)
         name = request.form.get('full_name', '').strip()
         uname = request.form.get('username', '').strip().lower()
         password = request.form.get('password', '').strip()
@@ -158,6 +189,8 @@ def admin_edit_user(uid):
         flash('المستخدم غير موجود', 'danger')
         return redirect(url_for('admin_users'))
     if request.method == 'POST':
+        if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+            flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
         fields = {'full_name':'full_name','username':'username','rank_title':'rank_title','phone_number':'phone_number'}
         for fld, col in fields.items():
             val = request.form.get(fld, '').strip()
@@ -192,6 +225,26 @@ def admin_toggle_block(uid):
         flash('تم التفعيل' if result == 0 else 'تم الإيقاف', 'success')
     return redirect(url_for('admin_users'))
 
+@app.route('/admin/self/reset-device', methods=['POST'])
+@admin_required
+def admin_reset_self_device():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger')
+        return redirect(request.referrer or url_for('admin_dashboard'))
+    reset_device_uid(session['user_id'])
+    flash('تم إعادة تعيين أجهزتك. سجل دخول من الجهاز الجديد.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/users/<int:uid>/reset-device', methods=['POST'])
+@admin_required
+def admin_reset_device(uid):
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
+    reset_device_uid(uid)
+    user = get_user_by_id(uid)
+    flash(f'تم إعادة تعيين الجهاز لـ {user["full_name"]}', 'success')
+    return redirect(url_for('admin_users'))
+
 @app.route('/admin/users/search', methods=['POST'])
 @admin_required
 def admin_search_user():
@@ -211,15 +264,20 @@ def admin_search_user():
 def admin_manual_attendance():
     soldiers = get_soldiers()
     if request.method == 'POST':
+        if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+            flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_manual_attendance'))
         uid = int(request.form.get('user_id', 0))
         action = request.form.get('action', '')
         note = request.form.get('note', '')
         if uid and action in ('check_in','check_out'):
-            record_attendance(uid, action, 0, 0, f"[يدوي - القائد] {note}")
+            ok, err = record_attendance(uid, action, 0, 0, f"تسجيل يدوي من القائد - {note}" if note else "تسجيل يدوي من القائد")
             u = get_user_by_id(uid)
-            act_ar = "حضور" if action=='check_in' else "انصراف"
-            push_notif(uid, f"تم تسجيل {act_ar} يدوياً من قِبل القائد.")
-            flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
+            act_ar = "دخول" if action=='check_in' else "خروج"
+            if not ok:
+                flash(f'لم يتم تسجيل {act_ar} لـ {u["full_name"]}: {err}', 'warning')
+            else:
+                push_notif(uid, f"تم تسجيل {act_ar} يدوياً من قِبل القائد.")
+                flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
         return redirect(url_for('admin_manual_attendance'))
     return render_template('admin/manual_att.html', soldiers=soldiers)
 
@@ -229,13 +287,63 @@ def admin_reports():
     dt = ksa().strftime('%Y-%m-%d')
     rpt = build_report(dt)
     dates = get_dates()
-    return render_template('admin/reports.html', rpt=rpt, dt=dt, dates=dates)
+    return render_template('admin/reports.html', rpt=rpt, dt=dt, dates=dates, now=ksa().strftime('%H:%M'))
 
 @app.route('/admin/reports/<date_str>')
 @admin_required
 def admin_report_date(date_str):
     rpt = build_report(date_str)
-    return render_template('admin/reports.html', rpt=rpt, dt=date_str, dates=get_dates())
+    return render_template('admin/reports.html', rpt=rpt, dt=date_str, dates=get_dates(), now=ksa().strftime('%H:%M'))
+
+@app.route('/admin/reports/<date_str>/export')
+@admin_required
+def admin_export_excel(date_str):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"تقرير {date_str}"
+    ws.sheet_view.rightToLeft = True
+    headers = ['الاسم', 'الرتبة', 'دخول', 'خروج', 'الحالة', 'ملاحظة']
+    hdr_font = Font(name='Tajawal', bold=True, size=12, color='FFFFFF')
+    hdr_fill = PatternFill('solid', fgColor='2EA043')
+    thin = Side(style='thin', color='30363D')
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=c, value=h)
+        cell.font = hdr_font
+        cell.fill = hdr_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+    soldiers = get_soldiers()
+    amap = get_report(date_str)
+    row = 2
+    body_font = Font(name='Tajawal', size=11)
+    for sid, nm, _, _, rank, phone in soldiers:
+        nm_full = f"{rank} / {nm}" if rank else nm
+        lv = get_leave(sid)
+        if sid in amap:
+            ci = amap[sid]['check_in'] or '---'
+            co = amap[sid]['check_out'] or '---'
+            note = amap[sid]['note'] or ''
+            status = 'بدون خروج' if amap[sid]['check_in'] and not amap[sid]['check_out'] else 'مكتمل'
+        elif lv:
+            ci = '---'; co = '---'; note = f"إجازة: {lv['label']}"; status = 'إجازة'
+        else:
+            ci = '---'; co = '---'; note = ''; status = 'غائب'
+        vals = [nm_full, rank or '---', ci, co, status, note]
+        for c, v in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=c, value=v)
+            cell.font = body_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = Border(top=thin, bottom=thin, left=thin, right=thin)
+        row += 1
+    ws.column_dimensions['A'].width = 30
+    for col in 'BCDEF': ws.column_dimensions[col].width = 16
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return Response(out.getvalue(), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename=report_{date_str}.xlsx'})
 
 @app.route('/admin/leaves')
 @admin_required
@@ -355,10 +463,10 @@ def admin_delete_history(hid):
 
 @app.route('/admin/security/reset-device/<int:uid>', methods=['POST'])
 @admin_required
-def admin_reset_device(uid):
+def admin_security_reset_device(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
-    set_device_uid(uid, None)
+    reset_device_uid(uid)
     flash('تم فك ربط الجهاز', 'success')
     return redirect(url_for('admin_security'))
 
@@ -394,6 +502,9 @@ def admin_broadcast():
     content = request.form.get('content', '').strip()
     if content:
         set_circular(content)
+        employees = db_get("SELECT id FROM users WHERE role='employee' AND is_blocked=0")
+        for eid, in employees:
+            push_notif(eid, f"📢 تعميم جديد: {content[:100]}{'...' if len(content)>100 else ''}")
         flash('تم بث التعميم لجميع الأفراد', 'success')
     return redirect(url_for('admin_circulars'))
 
@@ -424,7 +535,9 @@ def admin_reply_report(rid):
 @admin_required
 def admin_notifications():
     notifs = get_all_notifications(session['user_id'])
-    mark_read(session['user_id'])
+    unread_ids = [n[0] for n in notifs if not n[3]]
+    if unread_ids:
+        mark_read(session['user_id'], unread_ids)
     return render_template('admin/notifications.html', notifications=notifs)
 
 @app.route('/admin/send-message', methods=['GET','POST'])
@@ -451,7 +564,7 @@ def employee_dashboard():
     lv = get_leave(user['id'])
     circular = get_circular()
     unread = len(get_unread(user['id']))
-    today_att = db_get("SELECT action,timestamp FROM attendance WHERE user_id=? AND DATE(timestamp)=DATE('now','+3 hours') ORDER BY id", (user['id'],))
+    today_att = db_get("SELECT action,timestamp FROM attendance WHERE user_id=? AND DATE(timestamp)=? ORDER BY id", (user['id'], ksa().strftime('%Y-%m-%d')))
     return render_template('employee/dashboard.html', user=user, lv=lv, circular=circular, unread=unread, attendance=today_att)
 
 @app.route('/employee/attendance')
@@ -471,6 +584,10 @@ def employee_check_out():
 
 def handle_attendance(action):
     user_id = session['user_id']
+    now = time.time()
+    last = session.get('last_att', 0)
+    if now - last < 3:
+        return jsonify({'ok': False, 'msg': 'الرجاء الانتظار 3 ثوانٍ بين كل محاولة'}), 429
     data = request.get_json()
     if not data:
         return jsonify({'ok': False, 'msg': 'بيانات غير صالحة'}), 400
@@ -481,7 +598,10 @@ def handle_attendance(action):
     dist = geodesic(FACILITY_LOCATION, (lat, lng)).meters
     if dist > ALLOWED_RADIUS:
         return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
-    record_attendance(user_id, action, lat, lng)
+    ok, err = record_attendance(user_id, action, lat, lng)
+    if not ok:
+        return jsonify({'ok': False, 'msg': err}), 409
+    session['last_att'] = now
     verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
     return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
 
@@ -533,13 +653,18 @@ def employee_message_leader():
 @login_required
 def employee_notifications():
     notifs = get_all_notifications(session['user_id'])
-    mark_read(session['user_id'])
+    unread_ids = [n[0] for n in notifs if not n[3]]
+    if unread_ids:
+        mark_read(session['user_id'], unread_ids)
     return render_template('employee/notifications.html', notifications=notifs)
 
+init_db()
+ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
+if not get_user('admn'):
+    add_user('admn', ADMIN_PASS, 'القائد العام', 'admin')
+    set_admin_phone('admn', os.getenv('ADMIN_PHONE', '0503077519'))
+
 if __name__ == '__main__':
-    init_db()
-    if not get_user('admn'):
-        add_user('admn', '1000', 'القائد العام', 'admin')
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', '0') == '1'
     print(f"المنظومة تعمل على المنفذ {port}")
