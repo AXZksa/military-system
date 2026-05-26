@@ -1,8 +1,9 @@
-import os, secrets, uuid, time, base64, html, io, json, sqlite3
+import os, secrets, uuid, time, base64, html, io, json, sqlite3, threading
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file
 from geopy.distance import geodesic
 from database import *
 from dotenv import load_dotenv
+import backup
 
 load_dotenv()
 
@@ -186,7 +187,7 @@ def admin_add_user():
             return render_template('admin/user_form.html', user=None)
         ok, msg = add_user(uname, password, name, 'employee', rank, phone)
         flash(msg, 'success' if ok else 'danger')
-        if ok: return redirect(url_for('admin_users'))
+        if ok: _auto_save(); return redirect(url_for('admin_users'))
     return render_template('admin/user_form.html', user=None)
 
 @app.route('/admin/users/<int:uid>/edit', methods=['GET','POST'])
@@ -210,7 +211,7 @@ def admin_edit_user(uid):
         pw = request.form.get('password', '').strip()
         if pw:
             update_user(uid, 'password', pw)
-        flash('تم التحديث بنجاح', 'success')
+        _auto_save(); flash('تم التحديث بنجاح', 'success')
         return redirect(url_for('admin_users'))
     return render_template('admin/user_form.html', user=user)
 
@@ -220,7 +221,7 @@ def admin_delete_user(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
     delete_user(uid)
-    flash('تم الحذف', 'success')
+    _auto_save(); flash('تم الحذف', 'success')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/users/<int:uid>/toggle-block', methods=['POST'])
@@ -230,7 +231,7 @@ def admin_toggle_block(uid):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
     result = toggle_block(uid)
     if result is not None:
-        flash('تم التفعيل' if result == 0 else 'تم الإيقاف', 'success')
+        _auto_save(); flash('تم التفعيل' if result == 0 else 'تم الإيقاف', 'success')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/self/reset-device', methods=['POST'])
@@ -285,7 +286,7 @@ def admin_manual_attendance():
                 flash(f'لم يتم تسجيل {act_ar} لـ {u["full_name"]}: {err}', 'warning')
             else:
                 push_notif(uid, f"تم تسجيل {act_ar} يدوياً من قِبل القائد.")
-                flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
+                _auto_save(); flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
         return redirect(url_for('admin_manual_attendance'))
     return render_template('admin/manual_att.html', soldiers=soldiers)
 
@@ -372,7 +373,7 @@ def admin_register_leave():
         std, etd = set_leave(uid, hours)
         u = get_user_by_id(uid)
         push_notif(uid, f"تم تسجيل رخصة {hours} ساعة. تنتهي: {etd.strftime('%Y-%m-%d %H:%M')}")
-        flash(f'رخصة {hours} ساعة لـ {u["full_name"]}', 'success')
+        _auto_save(); flash(f'رخصة {hours} ساعة لـ {u["full_name"]}', 'success')
     return redirect(url_for('admin_leaves'))
 
 @app.route('/admin/leaves/<int:uid>/revoke', methods=['POST'])
@@ -383,7 +384,7 @@ def admin_revoke_leave(uid):
     revoke_leave(uid)
     u = get_user_by_id(uid)
     push_notif(uid, "تم سحب رخصتك وإعادتك للواجب الميداني.")
-    flash(f'تم سحب رخصة {u["full_name"]}', 'success')
+    _auto_save(); flash(f'تم سحب رخصة {u["full_name"]}', 'success')
     return redirect(url_for('admin_leaves'))
 
 @app.route('/admin/leave-requests/<int:rid>/approve', methods=['POST'])
@@ -397,7 +398,7 @@ def admin_approve_request(rid):
         u = get_user_by_id(uid)
         _, etd = set_leave(uid, hours)
         push_notif(uid, f"تم اعتماد رخصتك {hours} ساعة. تنتهي: {etd.strftime('%Y-%m-%d %H:%M')}")
-        flash('تم اعتماد الرخصة', 'success')
+        _auto_save(); flash('تم اعتماد الرخصة', 'success')
     return redirect(url_for('admin_leaves'))
 
 @app.route('/admin/leave-requests/<int:rid>/reject', methods=['POST'])
@@ -408,7 +409,7 @@ def admin_reject_request(rid):
     uid = reject_leave_request(rid)
     if uid:
         push_notif(uid, "تم رفض طلب الرخصة.")
-    flash('تم رفض الطلب', 'success')
+    _auto_save(); flash('تم رفض الطلب', 'success')
     return redirect(url_for('admin_leaves'))
 
 @app.route('/admin/shifts')
@@ -427,7 +428,7 @@ def admin_set_shift():
     duty = request.form.get('full_name', '').strip()
     if duty:
         set_shift(duty)
-        flash(f'تم تسجيل المستلم: {duty}', 'success')
+        _auto_save(); flash(f'تم تسجيل المستلم: {duty}', 'success')
     return redirect(url_for('admin_shifts'))
 
 @app.route('/admin/shifts/<int:sid>/delete', methods=['POST'])
@@ -436,7 +437,7 @@ def admin_delete_shift(sid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_shifts'))
     delete_shift(sid)
-    flash('تم فك الاستلامة', 'success')
+    _auto_save(); flash('تم فك الاستلامة', 'success')
     return redirect(url_for('admin_shifts'))
 
 @app.route('/admin/security')
@@ -610,6 +611,7 @@ def handle_attendance(action):
     if not ok:
         return jsonify({'ok': False, 'msg': err}), 409
     session['last_att'] = now
+    if os.getenv('GH_TOKEN'): threading.Thread(target=backup.do_backup, daemon=True).start()
     verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
     return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
 
@@ -629,7 +631,7 @@ def employee_request_leave():
     hours = int(request.form.get('hours', 0))
     if hours in (24, 48, 72):
         request_leave(session['user_id'], hours)
-        flash('تم رفع طلب الرخصة. بانتظار موافقة القائد.', 'success')
+        _auto_save(); flash('تم رفع طلب الرخصة. بانتظار موافقة القائد.', 'success')
     return redirect(url_for('employee_leave'))
 
 @app.route('/employee/report', methods=['GET','POST'])
@@ -739,6 +741,7 @@ def admin_restore():
                             db_run(f"INSERT OR IGNORE INTO {table} ({cols_list}) VALUES ({placeholders})", vals)
                     except: pass
             counts[table] = len(rows)
+        threading.Thread(target=backup.do_backup, daemon=True).start()
         flash(f'تم الاستيراد: {json.dumps(counts, ensure_ascii=False)}', 'success')
         return redirect(url_for('admin_dashboard'))
     return render_template('admin/restore.html')
@@ -748,6 +751,19 @@ ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
 if not get_user('admn'):
     add_user('admn', ADMIN_PASS, 'القائد العام', 'admin')
     set_admin_phone('admn', os.getenv('ADMIN_PHONE', '0503077519'))
+
+backup.do_restore()
+backup.start_auto_backup()
+
+def _auto_save():
+    threading.Thread(target=backup.do_backup, daemon=True).start()
+
+@app.route('/admin/force-backup')
+@admin_required
+def admin_force_backup():
+    _auto_save()
+    flash('تم حفظ نسخة احتياطية', 'success')
+    return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
