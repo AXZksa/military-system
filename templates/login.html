@@ -19,7 +19,8 @@
         {% endfor %}
         {% endif %}
         {% endwith %}
-        <form method="POST">
+        <form method="POST" id="loginForm">
+            <input type="hidden" name="device_fp" id="device_fp" value="">
             <div class="mb-3">
                 <label class="form-label">اسم المستخدم</label>
                 <div class="input-group">
@@ -43,4 +44,16 @@
         </div>
     </div>
 </div>
+<script>
+function getDeviceFP() {
+    var c = document.createElement('canvas');
+    var ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText(new Date().getTimezoneOffset().toString() + '|' + navigator.language, 2, 2);
+    var hash = btoa(c.toDataURL()).slice(0, 24);
+    return hash + '|' + screen.width + 'x' + screen.height + '|' + (navigator.userAgent || '').slice(0, 40);
+}
+document.getElementById('device_fp').value = getDeviceFP();
+</script>
 {% endblock %}

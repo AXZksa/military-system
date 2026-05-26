@@ -57,21 +57,25 @@ def build_report(date_str):
     for sid, nm, _, _, rank, phone in soldiers:
         nm_full = f"{rank} / {nm}" if rank else nm
         lv = get_leave(sid)
-        note = f" [{amap[sid]['note']}]" if sid in amap and amap[sid]['note'] else ''
+        note = f" <small class='text-muted'>({amap[sid]['note']})</small>" if sid in amap and amap[sid]['note'] else ''
         if sid in amap:
             ci = amap[sid]['check_in']  or '---'
             co = amap[sid]['check_out'] or '---'
+            loc_in = amap[sid].get('loc','')
+            loc_out = amap[sid].get('loc_out','')
+            loc_in_html = f'<a href="https://maps.google.com/?q={loc_in}" target="_blank" class="text-muted small" title="موقع الدخول"><i class="bi bi-geo-alt"></i></a>' if loc_in else ''
+            loc_out_html = f'<a href="https://maps.google.com/?q={loc_out}" target="_blank" class="text-muted small" title="موقع الخروج"><i class="bi bi-geo-alt"></i></a>' if loc_out else ''
             if amap[sid]['check_in'] and not amap[sid]['check_out']:
-                body += f"<tr class=\"table-warning\"><td>{nm_full}{note}</td><td>{ci}</td><td>---</td><td><span class=\"badge bg-warning\">بدون خروج</span></td></tr>"
+                body += f"<tr class=\"table-warning-row\"><td>{nm_full}{note}</td><td>{ci} {loc_in_html}</td><td>---</td><td><span class=\"badge bg-warning\">بدون خروج</span></td></tr>"
                 no_out += 1
             else:
-                body += f"<tr><td>{nm_full}{note}</td><td>{ci}</td><td>{co}</td><td><span class=\"badge bg-success\">مكتمل</span></td></tr>"
+                body += f"<tr><td>{nm_full}{note}</td><td>{ci} {loc_in_html}</td><td>{co} {loc_out_html}</td><td><span class=\"badge bg-success\">مكتمل</span></td></tr>"
             present += 1
         elif lv:
-            body += f"<tr class=\"table-info\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {lv['label']} تنتهي: {lv['end']}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
+            body += f"<tr class=\"table-info-row\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {lv['label']} تنتهي: {lv['end']}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
             on_leave += 1
         else:
-            body += f"<tr class=\"table-danger\"><td>{nm_full}</td><td colspan=\"2\">---</td><td><span class=\"badge bg-danger\">غائب</span></td></tr>"
+            body += f"<tr class=\"table-danger-row\"><td>{nm_full}</td><td colspan=\"2\">---</td><td><span class=\"badge bg-danger\">غائب</span></td></tr>"
             absent += 1
     return {'present': present, 'absent': absent, 'on_leave': on_leave, 'no_out': no_out, 'body': body}
 
@@ -81,6 +85,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         password = request.form.get('password', '')
+        device_fp = request.form.get('device_fp', '')
         user = get_user(username)
         if not user or not check_password(user['password'], password):
             flash('بيانات الدخول غير صحيحة', 'danger')
@@ -88,6 +93,14 @@ def login():
         if user['is_blocked']:
             flash('هذا الحساب موقوف. تواصل مع القائد.', 'danger')
             return render_template('login.html')
+        if user['device_uid']:
+            if device_fp and user['device_uid'] != device_fp:
+                add_security_alert(user['id'], 'جهاز غير معروف',
+                    f"محاولة دخول من جهاز جديد. البصمة: {device_fp[:30]}...")
+                flash('جهاز غير معروف. تم تسجيل بلاغ أمني.', 'danger')
+                return render_template('login.html')
+        elif device_fp:
+            set_device_uid(user['id'], device_fp)
         session.clear()
         session['user_id'] = user['id']
         session['username'] = user['username']
@@ -215,9 +228,9 @@ def admin_manual_attendance():
         action = request.form.get('action', '')
         note = request.form.get('note', '')
         if uid and action in ('check_in','check_out'):
-            ok, err = record_attendance(uid, action, 0, 0, f"[يدوي - القائد] {note}")
+            ok, err = record_attendance(uid, action, 0, 0, f"تسجيل يدوي من القائد - {note}" if note else "تسجيل يدوي من القائد")
             u = get_user_by_id(uid)
-            act_ar = "حضور" if action=='check_in' else "انصراف"
+            act_ar = "دخول" if action=='check_in' else "خروج"
             if not ok:
                 flash(f'لم يتم تسجيل {act_ar} لـ {u["full_name"]}: {err}', 'warning')
             else:

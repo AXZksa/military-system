@@ -15,16 +15,14 @@
                     <form method="POST" class="d-inline">
                         <input type="hidden" name="user_id" value="{{ sid }}">
                         <input type="hidden" name="action" value="check_in">
-                        <input type="hidden" name="note" value="تسجيل يدوي">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                        <button class="btn btn-success btn-sm rounded-pill"><i class="bi bi-check-lg"></i></button>
+                        <input type="hidden" name="note" value="">
                     </form>
                     <form method="POST" class="d-inline">
                         <input type="hidden" name="user_id" value="{{ sid }}">
                         <input type="hidden" name="action" value="check_out">
-                        <input type="hidden" name="note" value="تسجيل يدوي">
+                        <input type="hidden" name="note" value="">
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                        <button class="btn btn-danger btn-sm rounded-pill"><i class="bi bi-x-lg"></i></button>
+                        <button class="btn btn-danger btn-sm rounded-pill"><i class="bi bi-box-arrow-left"></i></button>
                     </form>
                 </div>
             </div>

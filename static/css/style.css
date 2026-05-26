@@ -52,6 +52,14 @@
 
 ::selection { background: var(--accent-green-dim); color: var(--accent-green-hover); }
 
+/* ── BOOTSTRAP UTILITY OVERRIDES ── */
+.text-muted, .text-secondary { color: var(--text-secondary) !important; }
+.text-dark { color: var(--text-primary) !important; }
+.bg-light { background: var(--bg-tertiary) !important; }
+.bg-dark { background: var(--bg-tertiary) !important; }
+.border-secondary { border-color: var(--border) !important; }
+.border-danger { border-color: var(--accent-red) !important; }
+
 body {
     font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--bg-primary);
@@ -388,7 +396,7 @@ body {
 .stat-card-orange h2 { color: var(--accent-orange); }
 
 .stat-card-fill-green { background: linear-gradient(135deg, #0d2818, #1a4a2a); border-left: none; }
-.stat-card-fill-green h2, .stat-card-fill-green h6 { color: #e6edf3; }
+.stat-card-fill-green h2, .stat-card-fill-green h6 { color: var(--text-primary); }
 .stat-card-fill-green .stat-icon { opacity: .15; color: var(--accent-green-hover); }
 
 /* ── TABLES ── */
@@ -565,6 +573,15 @@ body {
 }
 .modal-header { border-bottom: 1px solid var(--border); }
 .modal-footer { border-top: 1px solid var(--border); }
+
+/* ── BADGE RANK ── */
+.badge-rank {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {

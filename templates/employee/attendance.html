@@ -15,20 +15,20 @@
                     </div>
                 </div>
                 <div id="loadingSpinner" class="d-none mb-3">
-                    <div class="spinner-border text-gold" role="status"></div>
+                    <div class="spinner-border" style="color:var(--accent-green);" role="status"></div>
                     <p class="mt-2 text-muted">جارٍ تحديد موقعك عبر GPS...</p>
                 </div>
                 <div class="d-grid gap-3">
                     <button id="checkInBtn" class="btn btn-success btn-checkin" onclick="handleAttendance('check_in')">
-                        <i class="bi bi-check-circle fs-4 d-block mb-1"></i>
-                        تسجيل حضور
+                        <i class="bi bi-box-arrow-in-right fs-4 d-block mb-1"></i>
+                        تسجيل دخول
                     </button>
                     <button id="checkOutBtn" class="btn btn-danger btn-checkin" onclick="handleAttendance('check_out')">
-                        <i class="bi bi-x-circle fs-4 d-block mb-1"></i>
-                        تسجيل انصراف
+                        <i class="bi bi-box-arrow-left fs-4 d-block mb-1"></i>
+                        تسجيل خروج
                     </button>
                 </div>
-                <div class="mt-3 p-3 bg-light rounded-3">
+                <div class="mt-3 p-3 rounded-3" style="background:var(--bg-tertiary);">
                     <small class="text-muted d-flex align-items-center gap-2">
                         <i class="bi bi-info-circle"></i>
                         يجب أن تكون داخل الموقع لتسجيل الحضور. يتم تحديد موقعك عبر GPS بدقة.

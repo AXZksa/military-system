@@ -358,15 +358,16 @@ def record_attendance(user_id, action, lat, lng, note=''):
     return True, ''
 
 def get_report(date_str):
-    rows = db_get("SELECT user_id,action,timestamp,note FROM attendance WHERE DATE(timestamp)=?", (date_str,))
+    rows = db_get("SELECT user_id,action,timestamp,note,latitude,longitude FROM attendance WHERE DATE(timestamp)=?", (date_str,))
     amap = {}
-    for uid,action,ts,note in rows:
-        if uid not in amap: amap[uid] = {'check_in':None,'check_out':None,'note':''}
+    for uid,action,ts,note,lat,lng in rows:
+        if uid not in amap: amap[uid] = {'check_in':None,'check_out':None,'note':'','loc':'','loc_out':''}
         t = ts.split(' ')[1][:5]
+        loc = f"{lat},{lng}" if lat and lng else ''
         if action=='check_in' and not amap[uid]['check_in']:
-            amap[uid]['check_in'] = t; amap[uid]['note'] = note or ''
+            amap[uid]['check_in'] = t; amap[uid]['note'] = note or ''; amap[uid]['loc'] = loc
         elif action=='check_out':
-            amap[uid]['check_out'] = t
+            amap[uid]['check_out'] = t; amap[uid]['loc_out'] = loc
     return amap
 
 def get_dates():
