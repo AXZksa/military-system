@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}المستخدمون المحذوفون{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-trash ms-2"></i>المستخدمون المحذوفون</h4>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary rounded-pill px-3"><i class="bi bi-arrow-right ms-1"></i> العودة</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span><i class="bi bi-archive ms-2"></i>المحذوفون — <span class="badge bg-warning rounded-pill">{{ soldiers|length }}</span></span>
+    </div>
+    <div class="card-body p-0">
+        {% if soldiers %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for sid, nm, un, blk, rank, phone in soldiers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><span class="badge badge-rank px-3 py-2">{{ rank or '—' }}</span></td>
+                        <td class="fw-semibold">{{ nm }}</td>
+                        <td><code dir="ltr">{{ un }}</code></td>
+                        <td dir="ltr" class="text-muted small">{{ phone or '—' }}</td>
+                        <td class="text-nowrap">
+                            <form method="POST" action="{{ url_for('admin_restore_user', uid=sid) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-success rounded-pill" onclick="return confirm('استعادة {{ nm }}؟')"><i class="bi bi-arrow-counterclockwise"></i> استعادة</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted"><i class="bi bi-check-circle fs-1 d-block mb-2"></i>لا يوجد مستخدمون محذوفون</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

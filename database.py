@@ -133,6 +133,14 @@ if USE_PG:
                 id SERIAL PRIMARY KEY, shift_date TEXT, current_duty TEXT,
                 username TEXT DEFAULT '', created_at TEXT)
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL DEFAULT ''
+            )
+        """)
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT ''")
         conn.commit(); conn.close()
 
     def hash_password(password):
@@ -155,19 +163,21 @@ if USE_PG:
                 return False, "يوزر موجود مسبقاً"
             return False, str(e)
 
+    ALLOWED_USER_FIELDS = {'username','password','full_name','rank_title','phone_number'}
+
     def update_user(uid, field, value):
-        if field in ('username','password','full_name','rank_title','phone_number'):
-            if field == 'password':
-                value = hash_password(value)
-            elif field == 'username':
-                try:
-                    db_run("UPDATE users SET username=%s WHERE id=%s", (value.strip().lower(), uid))
-                    return True
-                except: return False
-            v = value.strip() if isinstance(value, str) else value
-            db_run(f"UPDATE users SET {field}=%s WHERE id=%s", (v, uid))
-            return True
-        return False
+        if field not in ALLOWED_USER_FIELDS:
+            return False
+        if field == 'password':
+            value = hash_password(value)
+        elif field == 'username':
+            try:
+                db_run("UPDATE users SET username=%s WHERE id=%s", (value.strip().lower(), uid))
+                return True
+            except: return False
+        v = value.strip() if isinstance(value, str) else value
+        db_run(f"UPDATE users SET {field}=%s WHERE id=%s", (v, uid))
+        return True
 
 else:
     import sqlite3
@@ -260,7 +270,15 @@ else:
             CREATE TABLE IF NOT EXISTS shifts_archive (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, shift_date TEXT, current_duty TEXT,
                 username TEXT DEFAULT '', created_at TEXT);
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL DEFAULT ''
+            );
         ''')
+        try: conn.execute("ALTER TABLE users ADD COLUMN is_deleted INTEGER DEFAULT 0")
+        except: pass
+        try: conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''")
+        except: pass
         conn.commit(); conn.close()
 
     def hash_password(password):
@@ -283,18 +301,20 @@ else:
         except Exception as e:
             return False, str(e)
 
+    ALLOWED_USER_FIELDS = {'username','password','full_name','rank_title','phone_number'}
+
     def update_user(uid, field, value):
-        if field in ('username','password','full_name','rank_title','phone_number'):
-            if field == 'password':
-                value = hash_password(value)
-            elif field == 'username':
-                try:
-                    db_run("UPDATE users SET username=? WHERE id=?", (value.strip().lower(), uid))
-                    return True
-                except: return False
-            db_run(f"UPDATE users SET {field}=? WHERE id=?", (value.strip() if isinstance(value, str) else value, uid))
-            return True
-        return False
+        if field not in ALLOWED_USER_FIELDS:
+            return False
+        if field == 'password':
+            value = hash_password(value)
+        elif field == 'username':
+            try:
+                db_run("UPDATE users SET username=? WHERE id=?", (value.strip().lower(), uid))
+                return True
+            except: return False
+        db_run(f"UPDATE users SET {field}=? WHERE id=?", (value.strip() if isinstance(value, str) else value, uid))
+        return True
 
 def ksa():
     return datetime.datetime.utcnow() + datetime.timedelta(hours=3)
@@ -324,6 +344,10 @@ def get_user_by_id(uid):
 
 def get_soldiers():
     rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee' AND (is_deleted IS NULL OR is_deleted=0)")
+    return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
+
+def get_deleted_soldiers():
+    rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee' AND is_deleted=1")
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
 def set_admin_phone(username, phone):
@@ -387,6 +411,20 @@ def get_report(date_str):
             amap[uid]['check_out'] = t; amap[uid]['loc_out'] = loc
     return amap
 
+# System settings
+def get_setting(key, default=None):
+    r = db_get("SELECT value FROM system_settings WHERE key=?", (key,))
+    return r[0][0] if r else default
+
+def set_setting(key, value):
+    db_run("INSERT INTO system_settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value", (key, value))
+
+def init_settings():
+    db_run("""
+        INSERT INTO system_settings (key,value) VALUES ('system_locked','0')
+        ON CONFLICT(key) DO NOTHING
+    """)
+
 def get_dates():
     return [r[0] for r in db_get("SELECT DISTINCT DATE(timestamp) FROM attendance ORDER BY DATE(timestamp) DESC LIMIT 30")]
 
@@ -394,10 +432,25 @@ def get_dates():
 def get_leave(user_id):
     r = db_get("SELECT start_time,end_time,duration_label FROM leaves WHERE user_id=? AND is_active=1", (user_id,))
     if r:
-        if ksa() > datetime.datetime.strptime(r[0][1], '%Y-%m-%d %H:%M'):
-            db_run("UPDATE leaves SET is_active=0 WHERE user_id=?", (user_id,)); return None
-        return {'start':r[0][0],'end':r[0][1],'label':r[0][2]}
+        try:
+            if ksa() > datetime.datetime.strptime(r[0][1], '%Y-%m-%d %H:%M'):
+                db_run("UPDATE leaves SET is_active=0 WHERE user_id=?", (user_id,)); return None
+            return {'start':r[0][0],'end':r[0][1],'label':r[0][2]}
+        except: return None
     return None
+
+def bulk_get_leaves(user_ids):
+    if not user_ids: return {}
+    placeholders = ','.join(['?' for _ in user_ids])
+    rows = db_get(f"SELECT user_id,start_time,end_time,duration_label FROM leaves WHERE user_id IN ({placeholders}) AND is_active=1", user_ids)
+    now = ksa()
+    result = {}
+    for uid, st, et, label in rows:
+        try:
+            if now <= datetime.datetime.strptime(et, '%Y-%m-%d %H:%M'):
+                result[uid] = {'start':st,'end':et,'label':label}
+        except: pass
+    return result
 
 def get_active_leaves():
     rows = db_get("SELECT l.user_id,u.full_name,u.chat_id,l.end_time,l.duration_label FROM leaves l JOIN users u ON l.user_id=u.id WHERE l.is_active=1")

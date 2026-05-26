@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}الصفحة غير موجودة{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+    <div class="display-1 fw-bold text-muted mb-3">404</div>
+    <h4 class="fw-bold mb-3"><i class="bi bi-question-circle ms-2"></i>الصفحة غير موجودة</h4>
+    <p class="text-muted mb-4">الصفحة التي تبحث عنها غير متوفرة</p>
+    <a href="{{ url_for('dashboard') if session.get('user_id') else url_for('login') }}" class="btn btn-success rounded-pill px-4">
+        <i class="bi bi-house ms-1"></i> العودة للرئيسية
+    </a>
+</div>
+{% endblock %}

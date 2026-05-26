@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/report_macros.html" import report_row %}
 {% block title %}التقارير{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
@@ -34,7 +35,7 @@
                 <thead class="table-dark">
                     <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
                 </thead>
-                <tbody>{{ rpt.body|safe }}</tbody>
+                <tbody>{% for r in rpt.rows %}{{ report_row(r) }}{% endfor %}</tbody>
             </table>
         </div>
     </div>

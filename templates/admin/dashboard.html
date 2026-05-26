@@ -1,12 +1,20 @@
 {% extends "base.html" %}
+{% from "macros/report_macros.html" import report_row %}
 {% block title %}لوحة التحكم{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
-    <div class="d-flex gap-2">
-        <span class="badge bg-tertiary px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
+        <div class="d-flex gap-2">
+            <form method="POST" action="{{ url_for('admin_system_lock') }}" class="d-inline">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button class="btn btn-sm {% if system_locked %}btn-success{% else %}btn-outline-danger{% endif %} rounded-pill px-3" title="{% if system_locked %}فتح النظام{% else %}قفل النظام{% endif %}">
+                    <i class="bi {% if system_locked %}bi-unlock{% else %}bi-lock-fill{% endif %} ms-1"></i>
+                    {% if system_locked %}مفتوح{% else %}مقفل{% endif %}
+                </button>
+            </form>
+            <span class="badge bg-tertiary px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
+        </div>
     </div>
-</div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
@@ -109,7 +117,7 @@
                         <thead class="table-dark">
                             <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
                         </thead>
-                        <tbody>{{ rpt.body|safe }}</tbody>
+                        <tbody>{% for r in rpt.rows %}{{ report_row(r) }}{% endfor %}</tbody>
                     </table>
                 </div>
             </div>

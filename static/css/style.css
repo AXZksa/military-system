@@ -32,6 +32,13 @@
     --shadow-lg: 0 8px 32px rgba(0,0,0,.4);
     --shadow-glow: 0 0 20px var(--accent-green-dim);
     --transition: all .2s ease;
+    /* Motion System */
+    --motion-fast: 150ms;
+    --motion-normal: 220ms;
+    --motion-slow: 300ms;
+    --motion-ease: cubic-bezier(.4,0,.2,1);
+    --motion-enter: cubic-bezier(.16,1,.3,1);
+    --motion-exit: cubic-bezier(.4,0,.7,.2);
 }
 
 [data-theme="light"] {
@@ -54,6 +61,71 @@
 * { box-sizing: border-box; }
 
 ::selection { background: var(--accent-green-dim); color: var(--accent-green-hover); }
+
+/* ── MOTION SYSTEM ── */
+html { background: var(--bg-primary); }
+html, body { background-color: var(--bg-primary); }
+
+/* Page content fade-in — every content block enters smoothly */
+.main-content > .container-fluid {
+    animation: pageEnter var(--motion-normal) var(--motion-enter);
+}
+
+@keyframes pageEnter {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards stagger enter — institutional, not gimmicky */
+.card {
+    animation: cardEnter var(--motion-slow) var(--motion-enter) both;
+}
+.card:nth-child(1) { animation-delay: 0ms; }
+.card:nth-child(2) { animation-delay: 50ms; }
+.card:nth-child(3) { animation-delay: 100ms; }
+
+@keyframes cardEnter {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Table rows — subtle staggered reveal */
+.table tbody tr {
+    animation: rowEnter var(--motion-normal) var(--motion-enter) both;
+}
+.table tbody tr:nth-child(1) { animation-delay: 0ms; }
+.table tbody tr:nth-child(2) { animation-delay: 30ms; }
+.table tbody tr:nth-child(3) { animation-delay: 60ms; }
+.table tbody tr:nth-child(4) { animation-delay: 90ms; }
+.table tbody tr:nth-child(5) { animation-delay: 120ms; }
+
+@keyframes rowEnter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Stat cards — subtle lift on mount */
+.stat-card {
+    animation: statEnter var(--motion-slow) var(--motion-enter) both;
+}
+.stat-card:nth-child(1) { animation-delay: 0ms; }
+.stat-card:nth-child(2) { animation-delay: 40ms; }
+.stat-card:nth-child(3) { animation-delay: 80ms; }
+.stat-card:nth-child(4) { animation-delay: 120ms; }
+
+@keyframes statEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Alert — slide in */
+.alert {
+    animation: alertEnter var(--motion-normal) var(--motion-enter) both;
+}
+@keyframes alertEnter {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
 
 /* ── BOOTSTRAP OVERRIDES ── */
 .text-muted { color: var(--text-muted) !important; }
@@ -147,7 +219,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
     z-index: 1030;
     display: flex;
     flex-direction: column;
-    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    transition: transform var(--motion-slow) var(--motion-ease);
     transform: translateX(100%);
     box-shadow: 4px 0 20px rgba(0,0,0,.2);
 }
@@ -181,18 +253,24 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
     flex-shrink: 0;
 }
 
-/* Overlay */
+/* Overlay — fast, no dark flash */
 .sidebar-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.5);
+    background: rgba(0,0,0,.3);
     z-index: 1029;
     opacity: 0;
     visibility: hidden;
-    transition: opacity .3s ease, visibility .3s ease;
+    transition: opacity var(--motion-fast) var(--motion-ease), visibility 0s var(--motion-fast);
+    pointer-events: none;
 }
 
-.sidebar-overlay.show { opacity: 1; visibility: visible; }
+.sidebar-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-normal) var(--motion-ease), visibility 0s 0s;
+    pointer-events: auto;
+}
 
 @media (min-width: 992px) {
     .sidebar { transform: translateX(0); }
@@ -271,8 +349,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
 .main-content {
     margin-top: var(--topbar-height);
     min-height: calc(100vh - var(--topbar-height));
-    transition: margin-right .35s cubic-bezier(.4,0,.2,1);
+    transition: margin-right var(--motion-slow) var(--motion-ease);
     padding-bottom: 48px;
+    will-change: margin-right;
 }
 
 @media (max-width: 991.98px) {

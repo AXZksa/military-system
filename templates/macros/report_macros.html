@@ -1,0 +1,30 @@
+{% macro report_row(r) %}
+{% set cls = 'table-info-row' if r.status == 'إجازة' else ('table-warning-row' if r.status == 'بدون خروج' else ('table-danger-row' if r.status == 'غائب' else '')) %}
+{% if r.status == 'إجازة' %}
+<tr class="{{ cls }}">
+    <td>{{ r.name }}</td>
+    <td colspan="2">إجازة: {{ r.leave_label }} تنتهي: {{ r.leave_end }}</td>
+    <td><span class="badge bg-info">إجازة</span></td>
+</tr>
+{% elif r.status == 'غائب' %}
+<tr class="{{ cls }}">
+    <td>{{ r.name }}</td>
+    <td colspan="2">---</td>
+    <td><span class="badge bg-danger">غائب</span></td>
+</tr>
+{% elif r.status == 'بدون خروج' %}
+<tr class="{{ cls }}">
+    <td>{{ r.name }}{% if r.note %}<br><small class="text-muted">({{ r.note }})</small>{% endif %}</td>
+    <td>{{ r.check_in }} {% if r.loc_in %}<a href="https://maps.google.com/?q={{ r.loc_in }}" target="_blank" rel="noopener noreferrer" class="text-muted small" title="موقع الدخول"><i class="bi bi-geo-alt"></i></a>{% endif %}</td>
+    <td>---</td>
+    <td><span class="badge bg-warning">بدون خروج</span></td>
+</tr>
+{% else %}
+<tr>
+    <td>{{ r.name }}{% if r.note %}<br><small class="text-muted">({{ r.note }})</small>{% endif %}</td>
+    <td>{{ r.check_in }} {% if r.loc_in %}<a href="https://maps.google.com/?q={{ r.loc_in }}" target="_blank" rel="noopener noreferrer" class="text-muted small" title="موقع الدخول"><i class="bi bi-geo-alt"></i></a>{% endif %}</td>
+    <td>{{ r.check_out }} {% if r.loc_out %}<a href="https://maps.google.com/?q={{ r.loc_out }}" target="_blank" rel="noopener noreferrer" class="text-muted small" title="موقع الخروج"><i class="bi bi-geo-alt"></i></a>{% endif %}</td>
+    <td><span class="badge bg-success">مكتمل</span></td>
+</tr>
+{% endif %}
+{% endmacro %}
