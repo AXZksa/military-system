@@ -17,19 +17,24 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-dark">
-                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th></th></tr>
+                    <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th>الجهاز</th><th></th></tr>
                 </thead>
                 <tbody>
                     {% for sid, nm, un, blk, rank, phone in soldiers %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td><span class="badge bg-secondary bg-opacity-25 text-dark px-3 py-2">{{ rank or '—' }}</span></td>
+                        <td><span class="badge badge-rank px-3 py-2">{{ rank or '—' }}</span></td>
                         <td class="fw-semibold">{{ nm }}</td>
                         <td><code dir="ltr">{{ un }}</code></td>
                         <td dir="ltr" class="text-muted small">{{ phone or '—' }}</td>
                         <td>
                             {% if blk %}<span class="badge bg-danger bg-opacity-75 rounded-pill px-3">موقوف</span>
                             {% else %}<span class="badge bg-success rounded-pill px-3">نشط</span>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill {% if user_device_map and user_device_map.get(sid) %}bg-info{% else %}bg-secondary{% endif %}">
+                                {% if user_device_map and user_device_map.get(sid) %}مرتبط{% else %}غير مرتبط{% endif %}
+                            </span>
                         </td>
                         <td class="text-nowrap">
                             <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm btn-warning rounded-pill" title="تعديل"><i class="bi bi-pencil"></i></a>
@@ -38,6 +43,10 @@
                                 <button class="btn btn-sm rounded-pill {% if blk %}btn-success{% else %}btn-secondary{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
                                     <i class="bi {% if blk %}bi-unlock{% else %}bi-lock{% endif %}"></i>
                                 </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_reset_device', uid=sid) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-info rounded-pill" title="إعادة تعيين الجهاز"><i class="bi bi-phone"></i></button>
                             </form>
                             <form method="POST" action="{{ url_for('admin_delete_user', uid=sid) }}" class="d-inline" onsubmit="return confirm('تأكيد حذف {{ nm }}؟')">
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

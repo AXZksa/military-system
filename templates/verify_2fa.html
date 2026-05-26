@@ -8,7 +8,7 @@
         </div>
         <div class="text-center">
             <h2>التحقق بخطوتين</h2>
-            <p class="subtitle">تم إرسال رمز التحقق إلى {{ phone_mask }}</p>
+            <p class="subtitle">أدخل الرمز من تطبيق المصادقة (Google Authenticator)</p>
         </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -19,7 +19,8 @@
         {% endfor %}
         {% endif %}
         {% endwith %}
-        <form method="POST">
+        <form method="POST" id="verifyForm">
+            <input type="hidden" name="device_fp" id="device_fp" value="">
             <div class="mb-4">
                 <label class="form-label">رمز التحقق (6 أرقام)</label>
                 <input type="text" name="code" class="form-control text-center fs-3 fw-bold" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus autocomplete="off">
@@ -29,9 +30,19 @@
             </button>
         </form>
         <div class="login-footer-text">
-            الرقم المستخدم: {{ phone_mask }}<br>
-            رمز التحقق صالح لمدة 3 دقائق
+            رمز التحقق يُحدَّث كل 30 ثانية
         </div>
     </div>
 </div>
+<script>
+(function() {
+    var c = document.createElement('canvas');
+    var ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText(new Date().getTimezoneOffset().toString() + '|' + navigator.language, 2, 2);
+    var hash = btoa(c.toDataURL()).slice(0, 24);
+    document.getElementById('device_fp').value = hash + '|' + screen.width + 'x' + screen.height + '|' + (navigator.userAgent || '').slice(0, 40);
+})();
+</script>
 {% endblock %}
