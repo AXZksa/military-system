@@ -55,6 +55,33 @@
     --shadow: 0 1px 3px rgba(0,0,0,.06);
     --shadow-lg: 0 8px 30px rgba(0,0,0,.08);
 }
+[data-theme="light"] .form-control,
+[data-theme="light"] .form-select {
+    color: #0f172a;
+    background: #ffffff;
+    border-color: #d6dde7;
+}
+[data-theme="light"] .form-control:focus,
+[data-theme="light"] .form-select:focus {
+    color: #0f172a;
+    background: #ffffff;
+    border-color: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34,197,94,.15);
+}
+[data-theme="light"] .form-control::placeholder {
+    color: #94a3b8;
+}
+[data-theme="light"] .table th {
+    color: #0f172a !important;
+    border-bottom-color: #22c55e !important;
+}
+[data-theme="light"] .table td {
+    color: #1e293b;
+}
+[data-theme="light"] .table code {
+    color: #166534;
+    background: rgba(34,197,94,.1);
+}
 
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap');
 
@@ -750,9 +777,15 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
 /* Fix text visibility in dark mode inputs */
 [data-theme="dark"] .form-control, [data-theme="dark"] .form-select {
     color: #e8edf2;
+    background: #1e2630;
 }
 [data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
     color: #ffffff;
+    background: #141a21;
+}
+[data-theme="dark"] .form-control:invalid,
+[data-theme="dark"] .form-select:invalid {
+    color: #e8edf2;
 }
 
 .form-label {
