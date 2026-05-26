@@ -784,9 +784,45 @@ body {
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
     .login-card { padding: 28px 20px; }
+    .login-card h2 { font-size: 1rem; }
     .stat-card h2 { font-size: 1.4rem; }
+    .stat-card h6 { font-size: .65rem; }
+    .stat-card .stat-icon { font-size: 1.6rem; left: 8px; }
+    .stat-card .card-body { padding: 14px; }
     .table { font-size: 12px; }
-    .table th, .table td { padding: 7px 8px; }
+    .table th, .table td { padding: 8px 10px; }
+    .card-body { padding: 14px; }
+    .card-header { padding: 12px 14px; }
+    .topbar .navbar-brand { max-width: 180px; overflow: hidden; }
+    .topbar .navbar-brand span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+    }
+    .sidebar-link { padding: 12px 16px; font-size: 14px; }
+    .form-control, .form-select { padding: 10px 12px; }
+}
+
+@media (max-width: 400px) {
+    .topbar .navbar-brand { max-width: 120px; font-size: .85rem; }
+    .topbar .navbar-brand i { font-size: 1.1rem; }
+    .topbar .btn-icon { width: 32px; height: 32px; }
+    .topbar .navbar-toggler { width: 32px; height: 32px; }
+    .login-card { padding: 20px 14px; }
+    .login-card h2 { font-size: .9rem; }
+    .stat-card h2 { font-size: 1.1rem; }
+    .stat-card h6 { font-size: .6rem; }
+    .stat-card .stat-icon { font-size: 1.3rem; left: 4px; }
+    .stat-card .card-body { padding: 10px; }
+    .table { font-size: 11px; }
+    .table th, .table td { padding: 6px 6px; }
+    .card-body { padding: 12px; }
+    .card-header { padding: 10px 12px; font-size: 12px; }
+    .btn { font-size: 12px; padding: 6px 12px; }
+    h4.fw-bold { font-size: .9rem; }
+    .alert { padding: 8px 10px; font-size: 12px; }
+    .container-fluid.p-3 { padding-left: 8px !important; padding-right: 8px !important; }
 }
 
 /* ── Glass ── */

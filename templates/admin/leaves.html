@@ -11,7 +11,7 @@
                 {% if active %}
                 <div class="list-group list-group-flush">
                     {% for uid, name, chat_id, end, label in active %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2 px-0">
                         <div>
                             <span class="fw-semibold">{{ name }}</span><br>
                             <small class="text-muted">{{ label }} — تنتهي: {{ end }}</small>
@@ -59,7 +59,7 @@
         {% if requests %}
         {% for rid, ruid, label, hours, rdate, status in requests %}
         {% set u = get_user_by_id(ruid) %}
-        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+        <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <span class="fw-semibold">{{ u.full_name if u else ruid }}</span><br>
                 <small>{{ label }} — {{ rdate }}</small>
