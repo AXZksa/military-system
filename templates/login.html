@@ -45,7 +45,15 @@
     </div>
 </div>
 <script>
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 function getDeviceFP() {
+    var token = localStorage.getItem('device_token');
+    if (!token) { token = uuidv4(); localStorage.setItem('device_token', token); }
     var c = document.createElement('canvas');
     c.width = 256; c.height = 128;
     var ctx = c.getContext('2d');
@@ -73,7 +81,7 @@ function getDeviceFP() {
         if (ext) renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '';
     }
     var fp = hash.toString(36) + '|' + screen.width + 'x' + screen.height + '|' + screen.colorDepth + '|' + renderer.slice(0,30);
-    return fp;
+    return token + '::' + fp;
 }
 document.getElementById('device_fp').value = getDeviceFP();
 </script>

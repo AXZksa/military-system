@@ -140,24 +140,39 @@ def login():
         if user['device_uid']:
             devs = user['device_uid'].split(',')
             if device_fp:
-                if device_fp not in devs:
+                parts = device_fp.split('::', 1)
+                token = parts[0] if len(parts) > 1 else ''
+                fp = parts[1] if len(parts) > 1 else device_fp
+                combined = token + '::' + fp
+                matched = False
+                for stored in devs:
+                    if stored == combined or stored == token or stored == fp:
+                        matched = True
+                        if stored != combined:
+                            devs.remove(stored)
+                            devs.append(combined)
+                            db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), user['id']))
+                        break
+                if not matched:
                     if len(devs) < 2:
-                        add_device_uid(user['id'], device_fp)
+                        add_device_uid(user['id'], combined)
                         add_security_alert(user['id'], 'جهاز جديد',
-                            f"تم تسجيل جهاز جديد للحساب. البصمة: {device_fp[:30]}...")
+                            f"تم تسجيل جهاز جديد للحساب. البصمة: {fp[:30]}...")
                         admins = get_admin_ids()
                         for (aid,) in admins:
                             push_notif(aid, f"⚠️ تنبيه أمني: تم تسجيل جهاز جديد لحساب {user['full_name']}")
                     else:
                         add_security_alert(user['id'], 'جهاز غير معروف',
-                            f"محاولة دخول من جهاز جديد. البصمة: {device_fp[:30]}...")
+                            f"محاولة دخول من جهاز جديد. البصمة: {fp[:30]}...")
                         admins = get_admin_ids()
                         for (aid,) in admins:
                             push_notif(aid, f"🚨 إنذار: محاولة دخول من جهاز غير معروف لحساب {user['full_name']}")
                         flash('جهاز غير معروف. تم تسجيل بلاغ أمني وإبلاغ القيادة.', 'danger')
                         return render_template('login.html')
         elif device_fp:
-            add_device_uid(user['id'], device_fp)
+            parts = device_fp.split('::', 1)
+            combined = device_fp if len(parts) == 1 else device_fp
+            add_device_uid(user['id'], combined)
         if not user['password'].startswith('$2'):
             db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
         session.clear()
