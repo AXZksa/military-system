@@ -13,8 +13,8 @@
     {% if session.user_id %}
     <nav class="navbar topbar">
         <div class="container-fluid px-3">
-            <button class="navbar-toggler border-0 p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler border-0 p-1" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
+                <span class="navbar-toggler-icon"><i></i></span>
             </button>
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="bi bi-shield-fill-check"></i>
@@ -32,12 +32,12 @@
         </div>
     </nav>
 
-    <div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="sidebar" data-bs-backdrop="false">
-        <div class="offcanvas-header">
-            <h5 class="mb-0"><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h5><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
+            <button type="button" class="btn-close" id="sidebarClose"></button>
         </div>
-        <div class="offcanvas-body p-0">
+        <div class="sidebar-body">
             <div class="sidebar-user-card">
                 <div class="avatar"><i class="bi bi-person"></i></div>
                 <h6>{{ session.full_name }}</h6>
@@ -100,11 +100,7 @@
                         <i class="bi bi-bell"></i> الإشعارات
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="sidebar-link" href="{{ url_for('admin_setup_2fa') }}">
-                        <i class="bi bi-shield-lock"></i> الأمان
-                    </a>
-                </li>
+
                 {% else %}
                 <li class="nav-item">
                     <a class="sidebar-link {% if '/employee' == request.path %}active{% endif %}" href="{{ url_for('employee_dashboard') }}">
@@ -138,18 +134,19 @@
                 </li>
                 {% endif %}
             </ul>
-            <div class="mt-auto p-3 border-top border-secondary border-opacity-10">
-                <small class="text-muted d-block text-center">جميع الحقوق محفوظة &copy; 2026</small>
-            </div>
+        </div>
+        <div class="sidebar-footer">
+            <small class="text-muted d-block text-center">جميع الحقوق محفوظة &copy; 2026</small>
         </div>
     </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <main class="main-content">
+    <main class="main-content" id="mainContent">
         <div class="container-fluid p-3 p-lg-4">
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2">
+            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm">
                 <i class="bi {% if category=='success' %}bi-check-circle{% elif category=='danger' %}bi-x-circle{% elif category=='warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -160,12 +157,6 @@
             {% block content %}{% endblock %}
         </div>
     </main>
-    <style>
-        @media (min-width: 992px) {
-            .sidebar.offcanvas { transform: none !important; visibility: visible !important; }
-            .sidebar .offcanvas-header .btn-close { display: none; }
-        }
-    </style>
     {% else %}
     {% block full_content %}{% endblock %}
     {% endif %}
@@ -183,6 +174,54 @@
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
             this.querySelector('i').className = next === 'dark' ? 'bi bi-moon-stars' : 'bi bi-sun';
+        });
+    })();
+
+    (function() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        var toggleBtn = document.getElementById('sidebarToggle');
+        var closeBtn = document.getElementById('sidebarClose');
+        var mainContent = document.getElementById('mainContent');
+        if (!sidebar || !toggleBtn) return;
+
+        function isDesktop() { return window.innerWidth >= 992; }
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            if (!isDesktop()) overlay.classList.add('show');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
+
+        toggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (sidebar.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+
+        if (isDesktop()) sidebar.classList.add('open');
+
+        window.addEventListener('resize', function() {
+            if (isDesktop()) {
+                sidebar.classList.add('open');
+                overlay.classList.remove('show');
+            } else {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSidebar();
         });
     })();
     </script>

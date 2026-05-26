@@ -4,11 +4,6 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
     <div class="d-flex gap-2">
-        {% if not totp_active %}
-        <a href="{{ url_for('admin_setup_2fa') }}" class="btn btn-outline-warning rounded-pill btn-sm px-3">
-            <i class="bi bi-shield-lock ms-1"></i> تفعيل التحقق بخطوتين
-        </a>
-        {% endif %}
         <span class="badge bg-tertiary px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
     </div>
 </div>
@@ -28,7 +23,7 @@
             <div class="card-body">
                 <i class="bi bi-check-circle stat-icon"></i>
                 <h6>حاضر اليوم</h6>
-                <h2>{{ rpt.present }}</h2>
+                <h2 class="text-success">{{ rpt.present }}</h2>
             </div>
         </div>
     </div>
@@ -37,7 +32,7 @@
             <div class="card-body">
                 <i class="bi bi-airplane stat-icon"></i>
                 <h6>إجازة</h6>
-                <h2>{{ rpt.on_leave }}</h2>
+                <h2 class="text-info">{{ rpt.on_leave }}</h2>
             </div>
         </div>
     </div>
@@ -46,7 +41,7 @@
             <div class="card-body">
                 <i class="bi bi-x-circle stat-icon"></i>
                 <h6>غائب</h6>
-                <h2>{{ rpt.absent }}</h2>
+                <h2 class="text-danger">{{ rpt.absent }}</h2>
             </div>
         </div>
     </div>
@@ -58,7 +53,7 @@
             <div class="card-body">
                 <i class="bi bi-question-circle stat-icon"></i>
                 <h6>بدون خروج</h6>
-                <h2>{{ rpt.no_out }}</h2>
+                <h2 class="text-warning">{{ rpt.no_out }}</h2>
             </div>
         </div>
     </div>
@@ -93,35 +88,91 @@
     </div>
 </div>
 
-{% if totp_active %}
-<div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded-3" style="background:var(--accent-green-dim);border:1px solid var(--accent-green);">
-    <div class="d-flex align-items-center gap-2">
-        <i class="bi bi-shield-check" style="color:var(--accent-green);font-size:1.2rem;"></i>
-        <span class="fw-semibold">التحقق بخطوتين مفعّل</span>
+<div class="row g-3 mb-4">
+    <div class="col-md-5">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-pie-chart ms-2"></i>نسبة الحضور والغياب</div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
+                <canvas id="attendanceChart" width="220" height="220" style="max-width:240px;max-height:240px;"></canvas>
+            </div>
+        </div>
     </div>
-    <form method="POST" action="{{ url_for('admin_disable_2fa') }}" class="d-inline">
-        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('إيقاف التحقق بخطوتين؟')">
-            <i class="bi bi-shield-slash ms-1"></i> إيقاف
-        </button>
-    </form>
-</div>
-{% endif %}
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-file-text ms-2"></i>تقرير اليوم — الحضور والانصراف</span>
-        <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-dark">
-                    <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
-                </thead>
-                <tbody>{{ rpt.body|safe }}</tbody>
-            </table>
+    <div class="col-md-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-text ms-2"></i>تقرير اليوم — الحضور والانصراف</span>
+                <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height:320px;overflow-y:auto;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
+                        </thead>
+                        <tbody>{{ rpt.body|safe }}</tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var ctx = document.getElementById('attendanceChart');
+    if (!ctx) return;
+    var present = {{ rpt.present }};
+    var absent  = {{ rpt.absent }};
+    var onLeave = {{ rpt.on_leave }};
+    var noOut   = {{ rpt.no_out }};
+    if (present + absent + onLeave + noOut === 0) {
+        ctx.parentElement.innerHTML = '<div class="empty-state"><i class="bi bi-graph-up"></i><p>لا توجد بيانات بعد</p></div>';
+        return;
+    }
+    var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['حاضر', 'غائب', 'إجازة', 'بدون خروج'],
+            datasets: [{
+                data: [present, absent, onLeave, noOut],
+                backgroundColor: ['#2ea043', '#da3633', '#58a6ff', '#d29922'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: isDark ? '#e6edf3' : '#1a1a2e',
+                        font: { family: 'Tajawal', size: 12 },
+                        padding: 16,
+                        usePointStyle: true,
+                        pointStyleWidth: 10
+                    }
+                },
+                tooltip: {
+                    bodyFont: { family: 'Tajawal' },
+                    callbacks: {
+                        label: function(c) { return c.label + ': ' + c.parsed + ' فرد (' + Math.round(c.parsed / (present+absent+onLeave+noOut) * 100) + '%)'; }
+                    }
+                }
+            }
+        }
+    });
+    var obs = new MutationObserver(function() {
+        var d = document.documentElement.getAttribute('data-theme') !== 'light';
+        chart.options.plugins.legend.labels.color = d ? '#e6edf3' : '#1a1a2e';
+        chart.update();
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
 {% endblock %}

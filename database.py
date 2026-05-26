@@ -45,8 +45,7 @@ if USE_PG:
                 device_uid  TEXT,
                 is_blocked  INTEGER DEFAULT 0,
                 phone_number TEXT DEFAULT NULL,
-                rank_title  TEXT DEFAULT '',
-                totp_secret TEXT DEFAULT ''
+                rank_title  TEXT DEFAULT ''
             )
         """)
         c.execute("""
@@ -194,8 +193,7 @@ else:
                 device_uid  TEXT,
                 is_blocked  INTEGER DEFAULT 0,
             phone_number TEXT DEFAULT NULL,
-            rank_title  TEXT DEFAULT '',
-            totp_secret TEXT DEFAULT ''
+            rank_title  TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS attendance (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -314,14 +312,9 @@ def rank_index(r):
     except: return -1
 
 def get_user(username):
-    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title,totp_secret FROM users WHERE LOWER(TRIM(username))=?",
-               (username.strip().lower(),))
-    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title','totp_secret'], r[0]))
-    return None
-
-def get_user_by_id(uid):
-    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title,totp_secret FROM users WHERE id=?", (uid,))
-    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title','totp_secret'], r[0]))
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE LOWER(TRIM(username))=?"
+               , (username.strip().lower(),))
+    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
     return None
 
 def get_user_by_id(uid):
@@ -336,13 +329,6 @@ def get_soldiers():
 def set_admin_phone(username, phone):
     db_run("UPDATE users SET phone_number=? WHERE username=? AND role='admin'", (phone, username))
 
-def set_totp_secret(uid, secret):
-    db_run("UPDATE users SET totp_secret=? WHERE id=?", (secret, uid))
-
-def get_totp_secret(uid):
-    r = db_get("SELECT totp_secret FROM users WHERE id=?", (uid,))
-    return r[0][0] if r else ''
-
 def delete_user(uid):
     db_run("DELETE FROM users WHERE id=?", (uid,))
 
@@ -353,8 +339,19 @@ def toggle_block(uid):
     db_run("UPDATE users SET is_blocked=? WHERE id=?", (new, uid))
     return new
 
-def set_device_uid(uid, device_id):
-    db_run("UPDATE users SET device_uid=? WHERE id=?", (device_id, uid))
+def add_device_uid(uid, device_id):
+    cur = get_user_by_id(uid)
+    devices = cur['device_uid'] or ''
+    devs = [d for d in devices.split(',') if d]
+    if device_id in devs:
+        return
+    if len(devs) >= 2:
+        return
+    devs.append(device_id)
+    db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), uid))
+
+def reset_device_uid(uid):
+    db_run("UPDATE users SET device_uid=? WHERE id=?", ('', uid))
 
 # Attendance
 def get_today_attendance(user_id):

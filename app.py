@@ -1,8 +1,7 @@
-import os, secrets, uuid, time, random, io, base64
+import os, secrets, uuid, time, base64
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from geopy.distance import geodesic
 from database import *
-import pyotp, qrcode
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -95,21 +94,15 @@ def login():
         if user['is_blocked']:
             flash('هذا الحساب موقوف. تواصل مع القائد.', 'danger')
             return render_template('login.html')
-        if user['device_uid'] and not (user['role'] == 'admin' and user.get('totp_secret')):
-            if device_fp and user['device_uid'] != device_fp:
+        if user['device_uid']:
+            devs = user['device_uid'].split(',')
+            if device_fp and device_fp not in devs:
                 add_security_alert(user['id'], 'جهاز غير معروف',
                     f"محاولة دخول من جهاز جديد. البصمة: {device_fp[:30]}...")
                 flash('جهاز غير معروف. تم تسجيل بلاغ أمني.', 'danger')
                 return render_template('login.html')
-        elif device_fp and not (user['role'] == 'admin' and user.get('totp_secret')):
-            set_device_uid(user['id'], device_fp)
-        if user['role'] == 'admin' and user.get('totp_secret'):
-            session['2fa_user'] = {
-                'id': user['id'], 'username': user['username'],
-                'full_name': user['full_name'], 'role': user['role']
-            }
-            flash('الرجاء إدخال رمز التحقق من تطبيق المصادقة.', 'info')
-            return redirect(url_for('verify_2fa'))
+        elif device_fp:
+            add_device_uid(user['id'], device_fp)
         if not user['password'].startswith('$2'):
             db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
         session.clear()
@@ -121,11 +114,10 @@ def login():
         return redirect(url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard'))
     return render_template('login.html')
 
-@app.route('/verify-2fa', methods=['GET', 'POST'])
-def verify_2fa():
-    u = session.get('2fa_user')
-    if not u:
-        return redirect(url_for('login'))
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
     if request.method == 'POST':
         entered = request.form.get('code', '').strip()
         secret = get_totp_secret(u['id'])
@@ -133,7 +125,7 @@ def verify_2fa():
         if totp.verify(entered, valid_window=1):
             device_fp = request.form.get('device_fp', '')
             if device_fp:
-                set_device_uid(u['id'], device_fp)
+                add_device_uid(u['id'], device_fp)
             session.clear()
             session['user_id'] = u['id']
             session['username'] = u['username']
@@ -146,29 +138,6 @@ def verify_2fa():
         return render_template('verify_2fa.html')
     return render_template('verify_2fa.html')
 
-@app.route('/admin/setup-2fa')
-@admin_required
-def admin_setup_2fa():
-    user = get_user_by_id(session['user_id'])
-    secret = user.get('totp_secret') or pyotp.random_base32()
-    if not user.get('totp_secret'):
-        set_totp_secret(user['id'], secret)
-        user = get_user_by_id(session['user_id'])
-    uri = pyotp.totp.TOTP(secret).provisioning_uri(user['username'], issuer_name="منظومة الحركة الميدانية")
-    img = qrcode.make(uri, image_factory=qrcode.image.svg.SvgImage)
-    buf = io.BytesIO()
-    img.save(buf)
-    qr_svg = buf.getvalue().decode('utf-8')
-    return render_template('setup_2fa.html', secret=secret, qr_svg=qr_svg, uri=uri)
-
-@app.route('/admin/disable-2fa', methods=['POST'])
-@admin_required
-def admin_disable_2fa():
-    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
-        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_dashboard'))
-    set_totp_secret(session['user_id'], '')
-    flash('تم إيقاف التحقق بخطوتين.', 'warning')
-    return redirect(url_for('admin_dashboard'))
 
 @app.route('/logout')
 def logout():
@@ -192,9 +161,8 @@ def admin_dashboard():
     soldiers = get_soldiers()
     pending = len(get_pending_requests())
     unread = len(get_unread(session['user_id']))
-    user = get_user_by_id(session['user_id'])
     return render_template('admin/dashboard.html', rpt=rpt, total=len(soldiers),
-        pending_req=pending, unread=unread, totp_active=bool(user.get('totp_secret')))
+        pending_req=pending, unread=unread)
 
 @app.route('/admin/users')
 @admin_required
@@ -271,7 +239,7 @@ def admin_toggle_block(uid):
 def admin_reset_device(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
-    set_device_uid(uid, '')
+    reset_device_uid(uid)
     user = get_user_by_id(uid)
     flash(f'تم إعادة تعيين الجهاز لـ {user["full_name"]}', 'success')
     return redirect(url_for('admin_users'))
@@ -445,7 +413,7 @@ def admin_delete_history(hid):
 def admin_security_reset_device(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
-    set_device_uid(uid, None)
+    reset_device_uid(uid)
     flash('تم فك ربط الجهاز', 'success')
     return redirect(url_for('admin_security'))
 
