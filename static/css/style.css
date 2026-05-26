@@ -6,9 +6,9 @@
     --surface-hover: #252b33;
     --border: #30363d;
     --border-light: #21262d;
-    --text-primary: #e6edf3;
-    --text-secondary: #8b949e;
-    --text-muted: #6e7681;
+    --text-primary: #f0f3f8;
+    --text-secondary: #b8c0cc;
+    --text-muted: #8b95a5;
     --accent-green: #2ea043;
     --accent-green-hover: #3fb950;
     --accent-green-dim: rgba(46,160,67,.15);
@@ -39,9 +39,9 @@
     --surface-hover: #f5f6f8;
     --border: #d0d5dd;
     --border-light: #e8eaed;
-    --text-primary: #1a1a2e;
-    --text-secondary: #5f6b7a;
-    --text-muted: #9aa0a8;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
     --shadow: 0 1px 3px rgba(0,0,0,.08);
     --shadow-lg: 0 8px 24px rgba(0,0,0,.1);
 }
@@ -523,9 +523,9 @@ body {
 .stat-card h6 {
     font-size: .75rem;
     font-weight: 600;
-    opacity: .8;
     margin-bottom: 4px;
     letter-spacing: .3px;
+    color: var(--text-secondary);
 }
 
 .stat-card h2 {
