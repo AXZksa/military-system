@@ -486,6 +486,18 @@ def admin_dismiss_alert(aid):
     flash('تم حذف التنبيه', 'success')
     return redirect(url_for('admin_security'))
 
+@app.route('/admin/security/test-alert', methods=['POST'])
+@admin_required
+def admin_test_alert():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
+    add_security_alert(session['user_id'], 'اختبار', 'تم إنشاء هذا التنبيه يدوياً للتأكد من عمل النظام.')
+    admins = get_admin_ids()
+    for (aid,) in admins:
+        push_notif(aid, '✅ اختبار: نظام التنبيهات الأمنية يعمل بشكل صحيح')
+    flash('✅ تم إنشاء تنبيه اختباري', 'success')
+    return redirect(url_for('admin_security'))
+
 @app.route('/admin/circulars')
 @admin_required
 def admin_circulars():

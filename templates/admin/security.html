@@ -22,6 +22,12 @@
                     {% endfor %}
                 </div>
                 {% else %}<p class="text-muted p-3 mb-0">✅ لا توجد تنبيهات أمنية.</p>{% endif %}
+                <div class="p-3 border-top">
+                    <form method="POST" action="{{ url_for('admin_test_alert') }}" class="d-inline">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-info rounded-pill"><i class="bi bi-bug ms-1"></i> اختبار التنبيهات</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
