@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}استعادة البيانات{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-cloud-upload ms-2"></i>استعادة البيانات</h4>
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-upload ms-2"></i>رفع ملف النسخة الاحتياطية</div>
+            <div class="card-body">
+                <p class="text-muted">اختر ملف JSON الذي سبق أن نزلته من صفحة النسخ الاحتياطي.</p>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <input type="file" name="file" class="form-control" accept=".json" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="bi bi-cloud-upload ms-1"></i> استيراد
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-info-circle ms-2"></i>تعليمات</div>
+            <div class="card-body small text-muted">
+                1. اذهب لصفحة <strong>النسخ الاحتياطي</strong> ونزل ملف backup.json<br>
+                2. بعد إعداد قاعدة البيانات الجديدة، ارجع هنا وارفع الملف<br>
+                3. النظام سيستورد جميع البيانات تلقائياً
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

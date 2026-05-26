@@ -108,6 +108,16 @@
                         <i class="bi bi-bell"></i> الإشعارات
                     </a>
                 </li>
+                <li class="nav-item mt-2">
+                    <a class="sidebar-link" href="{{ url_for('admin_backup') }}">
+                        <i class="bi bi-cloud-download"></i> النسخ الاحتياطي
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="sidebar-link" href="{{ url_for('admin_restore') }}">
+                        <i class="bi bi-cloud-upload"></i> استعادة البيانات
+                    </a>
+                </li>
 
                 {% else %}
                 <li class="nav-item">

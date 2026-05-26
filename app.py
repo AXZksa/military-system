@@ -1,5 +1,5 @@
-import os, secrets, uuid, time, base64, html, io
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
+import os, secrets, uuid, time, base64, html, io, json, sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file
 from geopy.distance import geodesic
 from database import *
 from dotenv import load_dotenv
@@ -657,6 +657,83 @@ def employee_notifications():
     if unread_ids:
         mark_read(session['user_id'], unread_ids)
     return render_template('employee/notifications.html', notifications=notifs)
+
+# ── Backup & Restore ──
+def _backup_rows(table):
+    try:
+        if USE_PG:
+            import psycopg2
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+            c = conn.cursor()
+            c.execute(f"SELECT * FROM {table}")
+            cols = [desc[0] for desc in c.description]
+            rows = [dict(zip(cols, row)) for row in c.fetchall()]
+            conn.close()
+            return rows
+        else:
+            conn = sqlite3.connect(DB)
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute(f"SELECT * FROM {table}")
+            rows = [dict(row) for row in c.fetchall()]
+            conn.close()
+            return rows
+    except:
+        return []
+
+@app.route('/admin/backup')
+@admin_required
+def admin_backup():
+    data = {}
+    for table in ['users','attendance','leaves','leave_requests','notifications','shifts','urgent_reports','circulars','history_records','security_alerts','shifts_archive']:
+        data[table] = _backup_rows(table)
+    return send_file(
+        io.BytesIO(json.dumps(data, ensure_ascii=False, default=str).encode('utf-8')),
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'backup_{ksa().strftime("%Y%m%d_%H%M")}.json'
+    )
+
+@app.route('/admin/restore', methods=['GET','POST'])
+@admin_required
+def admin_restore():
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if not file: flash('الرجاء اختيار ملف', 'danger'); return redirect(url_for('admin_restore'))
+        try:
+            data = json.load(file.stream)
+        except: flash('الملف غير صالح', 'danger'); return redirect(url_for('admin_restore'))
+        tables_map = {
+            'users': ('id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'),
+            'attendance': ('id','user_id','action','latitude','longitude','timestamp','note'),
+            'leaves': ('id','user_id','start_time','end_time','duration_label'),
+            'leave_requests': ('id','user_id','duration_label','hours_duration','request_date','status'),
+            'notifications': ('id','user_id','content','is_read','created_at'),
+            'shifts': ('id','shift_date','current_duty'),
+            'urgent_reports': ('id','sender_id','report_text','reply_text','created_at','status'),
+            'circulars': ('id','content','created_at'),
+            'history_records': ('id','user_id','note','created_at'),
+            'security_alerts': ('id','user_id','alert_type','detail','created_at'),
+            'shifts_archive': ('id','shift_date','current_duty','username','created_at'),
+        }
+        counts = {}
+        for table, cols in tables_map.items():
+            rows = data.get(table, [])
+            if rows:
+                placeholders = ','.join(['?' for _ in cols])
+                cols_list = ','.join(cols)
+                for row in rows:
+                    try:
+                        vals = [row.get(c) for c in cols]
+                        if USE_PG:
+                            db_run(f"INSERT INTO {table} ({cols_list}) VALUES ({placeholders}) ON CONFLICT DO NOTHING", vals)
+                        else:
+                            db_run(f"INSERT OR IGNORE INTO {table} ({cols_list}) VALUES ({placeholders})", vals)
+                    except: pass
+            counts[table] = len(rows)
+        flash(f'تم الاستيراد: {json.dumps(counts, ensure_ascii=False)}', 'success')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('admin/restore.html')
 
 init_db()
 ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
