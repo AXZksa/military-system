@@ -39,8 +39,10 @@
         </div>
         <div class="sidebar-body">
             <div class="sidebar-user-card">
-                <div class="avatar"><i class="bi bi-person"></i></div>
-                <h6>{{ session.full_name }}</h6>
+                <a href="{{ url_for('profile') }}" class="avatar-link">
+                    <div class="avatar"><i class="bi bi-person"></i></div>
+                </a>
+                <h6><a href="{{ url_for('profile') }}" class="text-decoration-none text-reset">{{ session.full_name }}</a></h6>
                 <small>{{ 'قائد المنظومة' if session.role == 'admin' else 'عسكري' }}</small>
                 {% if session.role == 'admin' %}
                 <form method="POST" action="{{ url_for('admin_reset_self_device') }}" class="mt-2" onsubmit="return confirm('إعادة تعيين أجهزتك المسجلة؟')">

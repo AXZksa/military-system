@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}الملف الشخصي{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-person-circle ms-2"></i>الملف الشخصي</div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <div class="text-center mb-4">
+                        <div style="width:80px;height:80px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;border:2px solid var(--accent-green);">
+                            <i class="bi bi-person fs-1" style="color:var(--accent-green);"></i>
+                        </div>
+                        <h5 class="fw-bold">{{ user.full_name }}</h5>
+                        <small class="text-muted">{{ 'قائد المنظومة' if user.role == 'admin' else user.rank_title or 'عسكري' }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الكامل</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الجوال</label>
+                        <input type="text" name="phone" class="form-control" value="{{ user.phone_number or '' }}">
+                    </div>
+                    {% if user.role == 'employee' %}
+                    <div class="mb-3">
+                        <label class="form-label">الرتبة</label>
+                        <input type="text" name="rank" class="form-control" value="{{ user.rank_title or '' }}">
+                    </div>
+                    {% endif %}
+                    <hr>
+                    <h6 class="fw-bold mb-3"><i class="bi bi-lock ms-1"></i>تغيير كلمة المرور</h6>
+                    <div class="mb-3">
+                        <label class="form-label">كلمة المرور القديمة</label>
+                        <input type="password" name="old_password" class="form-control" placeholder="اتركه فارغاً إن لم ترد التغيير">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">كلمة المرور الجديدة</label>
+                        <input type="password" name="new_password" class="form-control" placeholder="4 أحرف فأكثر">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-save ms-1"></i> حفظ التغييرات</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -148,6 +148,34 @@ def index():
         return redirect(url_for('employee_dashboard'))
     return redirect(url_for('login'))
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    uid = session['user_id']
+    user = get_user_by_id(uid)
+    if request.method == 'POST':
+        if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+            flash('خطأ في التحقق', 'danger'); return redirect(url_for('profile'))
+        full_name = request.form.get('full_name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        rank = request.form.get('rank', '').strip()
+        old_pw = request.form.get('old_password', '')
+        new_pw = request.form.get('new_password', '')
+        if full_name:
+            db_run("UPDATE users SET full_name=?,phone_number=?,rank_title=? WHERE id=?", (full_name, phone, rank, uid))
+            session['full_name'] = full_name
+            flash('تم تحديث الملف الشخصي', 'success')
+        if old_pw and new_pw:
+            if not check_password(user['password'], old_pw):
+                flash('كلمة المرور القديمة غير صحيحة', 'danger')
+            elif len(new_pw) < 4:
+                flash('كلمة المرور الجديدة قصيرة (4 أحرف فأكثر)', 'danger')
+            else:
+                db_run("UPDATE users SET password=? WHERE id=?", (hash_password(new_pw), uid))
+                flash('تم تغيير كلمة المرور', 'success')
+        return redirect(url_for('profile'))
+    return render_template('profile.html', user=user)
+
 # ── Admin ──
 @app.route('/admin')
 @admin_required
