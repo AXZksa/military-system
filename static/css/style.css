@@ -507,16 +507,24 @@ body {
 
 .stat-card .stat-icon {
     font-size: 2.2rem;
-    opacity: .12;
     position: absolute;
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
     transition: opacity .3s ease, transform .3s ease;
+    opacity: .12;
+    color: var(--text-secondary);
 }
+.stat-card-green .stat-icon { color: var(--accent-green); }
+.stat-card-gold .stat-icon { color: var(--accent-gold); }
+.stat-card-red .stat-icon { color: var(--accent-red); }
+.stat-card-blue .stat-icon { color: var(--accent-blue); }
+.stat-card-orange .stat-icon { color: var(--accent-orange); }
+
+[data-theme="dark"] .stat-card .stat-icon { opacity: .25; }
 
 .stat-card:hover .stat-icon {
-    opacity: .2;
+    opacity: .45 !important;
     transform: translateY(-50%) scale(1.15);
 }
 
