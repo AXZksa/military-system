@@ -380,7 +380,7 @@ def add_device_uid(uid, device_id):
                 db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), uid))
             return
     if len(devs) >= 2:
-        return
+        devs.pop(0)
     devs.append(device_id)
     db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), uid))
 

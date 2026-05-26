@@ -154,21 +154,10 @@ def login():
                             db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), user['id']))
                         break
                 if not matched:
-                    if len(devs) < 2:
-                        add_device_uid(user['id'], combined)
-                        add_security_alert(user['id'], 'جهاز جديد',
-                            f"تم تسجيل جهاز جديد للحساب. البصمة: {fp[:30]}...")
-                        admins = get_admin_ids()
-                        for (aid,) in admins:
-                            push_notif(aid, f"⚠️ تنبيه أمني: تم تسجيل جهاز جديد لحساب {user['full_name']}")
-                    else:
-                        add_security_alert(user['id'], 'جهاز غير معروف',
-                            f"محاولة دخول من جهاز جديد. البصمة: {fp[:30]}...")
-                        admins = get_admin_ids()
-                        for (aid,) in admins:
-                            push_notif(aid, f"🚨 إنذار: محاولة دخول من جهاز غير معروف لحساب {user['full_name']}")
-                        flash('جهاز غير معروف. تم تسجيل بلاغ أمني وإبلاغ القيادة.', 'danger')
-                        return render_template('login.html')
+                    add_device_uid(user['id'], combined)
+                    admins = get_admin_ids()
+                    for (aid,) in admins:
+                        push_notif(aid, f"⚠️ تنبيه: جهاز جديد لحساب {user['full_name']}")
         elif device_fp:
             parts = device_fp.split('::', 1)
             combined = device_fp if len(parts) == 1 else device_fp
