@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}سجل التدقيق{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-journal-text ms-2"></i>سجل التدقيق</h4>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive" style="max-height:500px;overflow-y:auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr><th>الوقت</th><th>القائد</th><th>الإجراء</th><th>التفاصيل</th></tr>
+                </thead>
+                <tbody>
+                    {% for log_id, admin_name, action, target_id, details, cat in logs %}
+                    <tr>
+                        <td class="small text-muted">{{ cat }}</td>
+                        <td class="fw-semibold">{{ admin_name }}</td>
+                        <td><span class="badge bg-primary rounded-pill">{{ action }}</span></td>
+                        <td class="small">{{ details or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-journal-text fs-1 text-muted"></i>
+            <p class="text-muted mt-2">لا توجد سجلات بعد.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -3,6 +3,19 @@
 {% block content %}
 <h4 class="fw-bold mb-4"><i class="bi bi-bell ms-2"></i>الإشعارات</h4>
 
+{% if notifications %}
+<div class="d-flex gap-2 mb-3">
+    <form method="POST" action="{{ url_for('admin_clear_read_notifications') }}" class="d-inline">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="bi bi-check-all ms-1"></i> حذف المقروء</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin_delete_all_notifications') }}" class="d-inline" onsubmit="return confirm('حذف جميع الإشعارات؟')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="bi bi-trash ms-1"></i> حذف الكل</button>
+    </form>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-body p-0">
         {% if notifications %}

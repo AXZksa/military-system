@@ -227,6 +227,10 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
     transform: scale(1.12);
     box-shadow: var(--shadow-glow);
 }
+.sidebar-user-card img.avatar {
+    object-fit: cover;
+    background: var(--surface);
+}
 
 .sidebar-user-card h6 { color: var(--text-primary); margin: 0; font-weight: 700; font-size: 15px; }
 .sidebar-user-card h6 a:hover { color: var(--accent-green) !important; }
@@ -271,7 +275,10 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-primary); }
     padding-bottom: 48px;
 }
 
-@media (max-width: 991.98px) { .main-content { margin-right: 0 !important; } }
+@media (max-width: 991.98px) {
+    .main-content { margin-right: 0; }
+    .sidebar.open ~ .main-content { margin-right: var(--sidebar-width); }
+}
 
 /* ── LOGIN PAGE ── */
 .login-page {

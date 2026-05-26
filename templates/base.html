@@ -25,7 +25,7 @@
                 <button class="btn-icon" id="themeToggle" title="تبديل السمة">
                     <i class="bi bi-moon-stars"></i>
                 </button>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm px-3">
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm px-3" onclick="return confirm('تسجيل خروج؟')">
                     <i class="bi bi-box-arrow-left"></i>
                 </a>
             </div>
@@ -40,7 +40,11 @@
         <div class="sidebar-body">
             <div class="sidebar-user-card">
                 <a href="{{ url_for('profile') }}" class="avatar-link">
+                    {% if session.user_avatar %}
+                    <img src="{{ session.user_avatar }}" class="avatar">
+                    {% else %}
                     <div class="avatar"><i class="bi bi-person"></i></div>
+                    {% endif %}
                 </a>
                 <h6><a href="{{ url_for('profile') }}" class="text-decoration-none text-reset">{{ session.full_name }}</a></h6>
                 <small>{{ 'قائد المنظومة' if session.role == 'admin' else 'عسكري' }}</small>
@@ -108,6 +112,11 @@
                 <li class="nav-item">
                     <a class="sidebar-link" href="{{ url_for('admin_notifications') }}">
                         <i class="bi bi-bell"></i> الإشعارات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="sidebar-link" href="{{ url_for('admin_audit_log') }}">
+                        <i class="bi bi-journal-text"></i> سجل التدقيق
                     </a>
                 </li>
                 {% else %}

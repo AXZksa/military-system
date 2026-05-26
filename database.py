@@ -312,25 +312,28 @@ def rank_index(r):
     except: return -1
 
 def get_user(username):
-    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE LOWER(TRIM(username))=?"
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title,avatar FROM users WHERE LOWER(TRIM(username))=?"
                , (username.strip().lower(),))
-    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
+    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title','avatar'], r[0]))
     return None
 
 def get_user_by_id(uid):
-    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title FROM users WHERE id=?", (uid,))
-    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title'], r[0]))
+    r = db_get("SELECT id,username,password,full_name,role,chat_id,device_uid,is_blocked,phone_number,rank_title,avatar FROM users WHERE id=?", (uid,))
+    if r: return dict(zip(['id','username','password','full_name','role','chat_id','device_uid','is_blocked','phone_number','rank_title','avatar'], r[0]))
     return None
 
 def get_soldiers():
-    rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee'")
+    rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee' AND (is_deleted IS NULL OR is_deleted=0)")
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
 def set_admin_phone(username, phone):
     db_run("UPDATE users SET phone_number=? WHERE username=? AND role='admin'", (phone, username))
 
 def delete_user(uid):
-    db_run("DELETE FROM users WHERE id=?", (uid,))
+    db_run("UPDATE users SET is_deleted=1 WHERE id=?", (uid,))
+
+def restore_user(uid):
+    db_run("UPDATE users SET is_deleted=0 WHERE id=?", (uid,))
 
 def toggle_block(uid):
     u = get_user_by_id(uid)
@@ -389,27 +392,27 @@ def get_dates():
 
 # Leaves
 def get_leave(user_id):
-    r = db_get("SELECT start_time,end_time,duration_label FROM leaves WHERE user_id=?", (user_id,))
+    r = db_get("SELECT start_time,end_time,duration_label FROM leaves WHERE user_id=? AND is_active=1", (user_id,))
     if r:
         if ksa() > datetime.datetime.strptime(r[0][1], '%Y-%m-%d %H:%M'):
-            db_run("DELETE FROM leaves WHERE user_id=?", (user_id,)); return None
+            db_run("UPDATE leaves SET is_active=0 WHERE user_id=?", (user_id,)); return None
         return {'start':r[0][0],'end':r[0][1],'label':r[0][2]}
     return None
 
 def get_active_leaves():
-    rows = db_get("SELECT l.user_id,u.full_name,u.chat_id,l.end_time,l.duration_label FROM leaves l JOIN users u ON l.user_id=u.id")
+    rows = db_get("SELECT l.user_id,u.full_name,u.chat_id,l.end_time,l.duration_label FROM leaves l JOIN users u ON l.user_id=u.id WHERE l.is_active=1")
     now  = ksa()
     return [r for r in rows if r[3] and now <= datetime.datetime.strptime(r[3],'%Y-%m-%d %H:%M')]
 
 def set_leave(user_id, hours):
     std = ksa(); etd = std + datetime.timedelta(hours=hours)
-    db_run("DELETE FROM leaves WHERE user_id=?", (user_id,))
+    db_run("UPDATE leaves SET is_active=0 WHERE user_id=?", (user_id,))
     db_run("INSERT INTO leaves (user_id,start_time,end_time,duration_label) VALUES (?,?,?,?)",
            (user_id, std.strftime('%Y-%m-%d %H:%M'), etd.strftime('%Y-%m-%d %H:%M'), f"{hours} ساعة"))
     return std, etd
 
 def revoke_leave(user_id):
-    db_run("DELETE FROM leaves WHERE user_id=?", (user_id,))
+    db_run("UPDATE leaves SET is_active=0 WHERE user_id=?", (user_id,))
 
 def request_leave(user_id, hours):
     db_run("INSERT INTO leave_requests (user_id,duration_label,hours_duration,request_date) VALUES (?,?,?,?)",
@@ -497,6 +500,23 @@ def get_circular():
 
 def set_circular(content):
     db_run("INSERT INTO circulars (content,created_at) VALUES (?,?)", (content, ksa().strftime('%Y-%m-%d %H:%M')))
+
+# Audit log
+def log_action(admin_id, action, target_id=None, details=''):
+    db_run("INSERT INTO audit_log (admin_id,action,target_id,details,created_at) VALUES (?,?,?,?,?)",
+           (admin_id, action, target_id, details, ksa_str()))
+
+def get_audit_log(limit=50):
+    return db_get("SELECT al.id,u.full_name,al.action,al.target_id,al.details,al.created_at FROM audit_log al JOIN users u ON al.admin_id=u.id ORDER BY al.id DESC LIMIT ?", (limit,))
+
+def clear_old_audit():
+    db_run("DELETE FROM audit_log WHERE created_at < ?", ((ksa() - datetime.timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S'),))
+
+def delete_unread_notifications(user_id):
+    db_run("DELETE FROM notifications WHERE user_id=?", (user_id,))
+
+def delete_read_notifications(user_id):
+    db_run("DELETE FROM notifications WHERE user_id=? AND is_read=1", (user_id,))
 
 # Reports
 def get_open_reports():

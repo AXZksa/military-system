@@ -11,7 +11,7 @@
                 <div id="locationStatus" class="mb-3">
                     <div id="statusMessage" class="alert alert-info d-flex align-items-center gap-2 py-2">
                         <i class="bi bi-info-circle"></i>
-                        <span>اضغط على أحد الأزرار لتسجيل حضورك</span>
+                        <span>اضغط على الزر لتسجيل حضورك</span>
                     </div>
                 </div>
                 <div id="loadingSpinner" class="d-none mb-3">
@@ -19,13 +19,26 @@
                     <p class="mt-2 text-muted">جارٍ تحديد موقعك عبر GPS...</p>
                 </div>
                 <div class="d-grid gap-3">
-                    <button id="checkInBtn" class="btn btn-success btn-checkin" onclick="handleAttendance('check_in')">
+                    {% if has_check_out %}
+                    <button id="doneBtn" class="btn btn-secondary btn-checkin" disabled>
+                        <i class="bi bi-check-all fs-4 d-block mb-1"></i>
+                        اكتمل تسجيل اليوم
+                    </button>
+                    {% elif has_check_in %}
+                    <button id="actionBtn" class="btn btn-danger btn-checkin" onclick="handleAttendance('check_out')">
+                        <i class="bi bi-box-arrow-left fs-4 d-block mb-1"></i>
+                        تسجيل خروج
+                    </button>
+                    {% else %}
+                    <button id="actionBtn" class="btn btn-success btn-checkin" onclick="handleAttendance('check_in')">
                         <i class="bi bi-box-arrow-in-right fs-4 d-block mb-1"></i>
                         تسجيل دخول
                     </button>
-                    <button id="checkOutBtn" class="btn btn-danger btn-checkin" onclick="handleAttendance('check_out')">
-                        <i class="bi bi-box-arrow-left fs-4 d-block mb-1"></i>
-                        تسجيل خروج
+                    {% endif %}
+                </div>
+                <div class="mt-2">
+                    <button id="fallbackBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="handleNoGPS()" {% if has_check_out %}disabled{% endif %}>
+                        <i class="bi bi-geo-alt-slash ms-1"></i> تسجيل بدون GPS
                     </button>
                 </div>
                 <div class="mt-3 p-3 rounded-3" style="background:var(--bg-tertiary);">
@@ -44,65 +57,86 @@
 const facilityLat = {{ facility_lat|default(25.8633556) }};
 const facilityLng = {{ facility_lng|default(43.4831471) }};
 const allowedRadius = {{ allowed_radius|default(50) }};
+const hasCheckIn = {{ 'true' if has_check_in else 'false' }};
+const hasCheckOut = {{ 'true' if has_check_out else 'false' }};
+
+function setStatus(cls, html) {
+    var s = document.getElementById('statusMessage');
+    s.className = 'alert alert-' + cls + ' d-flex align-items-center gap-2 py-2';
+    s.innerHTML = html;
+}
+
+function setLoading(on) {
+    document.getElementById('loadingSpinner').classList.toggle('d-none', !on);
+}
+
+function sendAttendance(action, lat, lng, isFallback) {
+    setLoading(true);
+    setStatus('info', '<i class="bi bi-hourglass-split"></i> جاري تسجيل...');
+    var body = JSON.stringify({latitude: lat, longitude: lng, fallback: isFallback || false, note: isFallback ? 'بدون GPS' : ''});
+    fetch(action === 'check_in' ? '/employee/check-in' : '/employee/check-out', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: body
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            setStatus('success', '<i class="bi bi-check-circle"></i> ' + data.msg);
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + data.msg);
+        }
+    })
+    .catch(function() {
+        setStatus('danger', '<i class="bi bi-x-circle"></i> خطأ في الاتصال');
+    })
+    .finally(function() {
+        setLoading(false);
+        var btn = document.getElementById('actionBtn');
+        if (btn) btn.disabled = false;
+    });
+}
 
 function handleAttendance(action) {
-    const btn = action === 'check_in' ? 'checkInBtn' : 'checkOutBtn';
-    const el = document.getElementById(btn);
-    const spinner = document.getElementById('loadingSpinner');
-    const status = document.getElementById('statusMessage');
+    var btn = document.getElementById('actionBtn');
+    if (!btn) return;
+    btn.disabled = true;
 
-    el.disabled = true;
-    spinner.classList.remove('d-none');
-    status.className = 'alert alert-info';
-    status.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري تحديد موقعك...';
+    setLoading(true);
+    setStatus('info', '<i class="bi bi-hourglass-split"></i> جاري تحديد موقعك...');
 
     if (!navigator.geolocation) {
-        status.className = 'alert alert-danger';
-        status.innerHTML = '<i class="bi bi-x-circle"></i> المتصفح لا يدعم تحديد الموقع';
-        el.disabled = false; spinner.classList.add('d-none');
+        setStatus('danger', '<i class="bi bi-x-circle"></i> المتصفح لا يدعم تحديد الموقع');
+        btn.disabled = false; setLoading(false);
         return;
     }
 
     navigator.geolocation.getCurrentPosition(
         function(pos) {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            spinner.classList.add('d-none');
-
-            fetch(action === 'check_in' ? '/employee/check-in' : '/employee/check-out', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({latitude: lat, longitude: lng})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) {
-                    status.className = 'alert alert-success';
-                    status.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.msg;
-                } else {
-                    status.className = 'alert alert-danger';
-                    status.innerHTML = '<i class="bi bi-x-circle"></i> ' + data.msg;
-                }
-            })
-            .catch(err => {
-                status.className = 'alert alert-danger';
-                status.innerHTML = '<i class="bi bi-x-circle"></i> خطأ في الاتصال';
-            })
-            .finally(() => { el.disabled = false; });
+            sendAttendance(action, pos.coords.latitude, pos.coords.longitude);
         },
         function(err) {
-            spinner.classList.add('d-none');
-            el.disabled = false;
-            const msgs = {
-                1: 'تم رفض إذن الموقع. الرجاء السماح بالوصول إلى الموقع.',
-                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS.',
-                3: 'انتهت المهلة. حاول مرة أخرى.'
+            setLoading(false);
+            btn.disabled = false;
+            var msgs = {
+                1: 'تم رفض إذن الموقع. استخدم زر "تسجيل بدون GPS".',
+                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS أو استخدم الزر البديل.',
+                3: 'انتهت المهلة. حاول مرة أخرى أو استخدم الزر البديل.'
             };
-            status.className = 'alert alert-danger';
-            status.innerHTML = '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع');
+            setStatus('danger', '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع'));
         },
         {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
     );
+}
+
+function handleNoGPS() {
+    if (!confirm('تسجيل بدون GPS؟ سيتم توثيق المحاولة.')) return;
+    setStatus('warning', '<i class="bi bi-exclamation-triangle"></i> يتم التسجيل بدون GPS...');
+    var action = hasCheckIn ? 'check_out' : 'check_in';
+    var fallbackLat = facilityLat + (Math.random() - 0.5) * 0.0001;
+    var fallbackLng = facilityLng + (Math.random() - 0.5) * 0.0001;
+    sendAttendance(action, fallbackLat, fallbackLng, true);
 }
 </script>
 {% endblock %}

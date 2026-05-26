@@ -2,47 +2,51 @@
 {% block title %}الملف الشخصي{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-6">
+    <div class="col-lg-5">
         <div class="card">
             <div class="card-header"><i class="bi bi-person-circle ms-2"></i>الملف الشخصي</div>
-            <div class="card-body">
-                <form method="POST">
+            <div class="card-body text-center">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <div class="text-center mb-4">
-                        <div style="width:80px;height:80px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;border:2px solid var(--accent-green);">
+                    <div class="mb-4">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;">
+                        {% else %}
+                        <div id="avatarPlaceholder" style="width:120px;height:120px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--accent-green);">
                             <i class="bi bi-person fs-1" style="color:var(--accent-green);"></i>
                         </div>
-                        <h5 class="fw-bold">{{ user.full_name }}</h5>
-                        <small class="text-muted">{{ 'قائد المنظومة' if user.role == 'admin' else user.rank_title or 'عسكري' }}</small>
+                        {% endif %}
                     </div>
+                    <h5 class="fw-bold mb-1">{{ user.full_name }}</h5>
+                    <small class="text-muted d-block mb-4">{{ 'قائد المنظومة' if user.role == 'admin' else user.rank_title or 'عسكري' }}</small>
                     <div class="mb-3">
-                        <label class="form-label">الاسم الكامل</label>
-                        <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                        <label class="form-label w-100">اختر صورة</label>
+                        <input type="file" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp" class="form-control" onchange="previewAvatar(event)">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">رقم الجوال</label>
-                        <input type="text" name="phone" class="form-control" value="{{ user.phone_number or '' }}">
-                    </div>
-                    {% if user.role == 'employee' %}
-                    <div class="mb-3">
-                        <label class="form-label">الرتبة</label>
-                        <input type="text" name="rank" class="form-control" value="{{ user.rank_title or '' }}">
-                    </div>
-                    {% endif %}
-                    <hr>
-                    <h6 class="fw-bold mb-3"><i class="bi bi-lock ms-1"></i>تغيير كلمة المرور</h6>
-                    <div class="mb-3">
-                        <label class="form-label">كلمة المرور القديمة</label>
-                        <input type="password" name="old_password" class="form-control" placeholder="اتركه فارغاً إن لم ترد التغيير">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">كلمة المرور الجديدة</label>
-                        <input type="password" name="new_password" class="form-control" placeholder="4 أحرف فأكثر">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-save ms-1"></i> حفظ التغييرات</button>
+                    <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-upload ms-1"></i> رفع الصورة</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<script>
+function previewAvatar(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = document.getElementById('avatarPreview') || document.createElement('img');
+        if (!img.id) {
+            img.id = 'avatarPreview';
+            img.className = 'rounded-circle border border-2';
+            img.style.cssText = 'width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;';
+            const placeholder = document.getElementById('avatarPlaceholder');
+            if (placeholder) placeholder.replaceWith(img);
+            else document.querySelector('.mb-4').appendChild(img);
+        }
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+</script>
 {% endblock %}

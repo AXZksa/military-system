@@ -65,7 +65,12 @@ def build_report(date_str):
         lv = get_leave(sid)
         note_raw = amap[sid]['note'] if sid in amap and amap[sid]['note'] else ''
         note = f" <small class='text-muted'>({html.escape(note_raw)})</small>" if note_raw else ''
-        if sid in amap:
+        if lv:
+            label_e = html.escape(lv['label'])
+            end_e = html.escape(lv['end'])
+            body += f"<tr class=\"table-info-row\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {label_e} تنتهي: {end_e}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
+            on_leave += 1
+        elif sid in amap:
             ci = html.escape(amap[sid]['check_in']  or '---')
             co = html.escape(amap[sid]['check_out'] or '---')
             loc_in = amap[sid].get('loc','')
@@ -78,11 +83,6 @@ def build_report(date_str):
             else:
                 body += f"<tr><td>{nm_full}{note}</td><td>{ci} {loc_in_html}</td><td>{co} {loc_out_html}</td><td><span class=\"badge bg-success\">مكتمل</span></td></tr>"
             present += 1
-        elif lv:
-            label_e = html.escape(lv['label'])
-            end_e = html.escape(lv['end'])
-            body += f"<tr class=\"table-info-row\"><td>{nm_full}</td><td colspan=\"2\">إجازة: {label_e} تنتهي: {end_e}</td><td><span class=\"badge bg-info\">إجازة</span></td></tr>"
-            on_leave += 1
         else:
             body += f"<tr class=\"table-danger-row\"><td>{nm_full}</td><td colspan=\"2\">---</td><td><span class=\"badge bg-danger\">غائب</span></td></tr>"
             absent += 1
@@ -131,6 +131,7 @@ def login():
         session['username'] = user['username']
         session['full_name'] = user['full_name']
         session['role'] = user['role']
+        session['user_avatar'] = user.get('avatar', '')
         session.permanent = True
         return redirect(url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard'))
     return render_template('login.html')
@@ -156,23 +157,18 @@ def profile():
     if request.method == 'POST':
         if request.form.get('_csrf', '') != session.get('csrf_token', ''):
             flash('خطأ في التحقق', 'danger'); return redirect(url_for('profile'))
-        full_name = request.form.get('full_name', '').strip()
-        phone = request.form.get('phone', '').strip()
-        rank = request.form.get('rank', '').strip()
-        old_pw = request.form.get('old_password', '')
-        new_pw = request.form.get('new_password', '')
-        if full_name:
-            db_run("UPDATE users SET full_name=?,phone_number=?,rank_title=? WHERE id=?", (full_name, phone, rank, uid))
-            session['full_name'] = full_name
-            flash('تم تحديث الملف الشخصي', 'success')
-        if old_pw and new_pw:
-            if not check_password(user['password'], old_pw):
-                flash('كلمة المرور القديمة غير صحيحة', 'danger')
-            elif len(new_pw) < 4:
-                flash('كلمة المرور الجديدة قصيرة (4 أحرف فأكثر)', 'danger')
-            else:
-                db_run("UPDATE users SET password=? WHERE id=?", (hash_password(new_pw), uid))
-                flash('تم تغيير كلمة المرور', 'success')
+        if 'avatar' in request.files:
+            f = request.files['avatar']
+            if f and f.filename:
+                import base64
+                raw = f.read()
+                ext = f.filename.rsplit('.',1)[-1].lower() if '.' in f.filename else 'png'
+                if ext not in ('png','jpg','jpeg','gif','webp'): ext = 'png'
+                b64 = base64.b64encode(raw).decode()
+                avatar = f"data:image/{ext};base64,{b64}"
+                db_run("UPDATE users SET avatar=? WHERE id=?", (avatar, uid))
+                session['user_avatar'] = avatar
+                flash('تم تغيير الصورة', 'success')
         return redirect(url_for('profile'))
     return render_template('profile.html', user=user)
 
@@ -248,8 +244,20 @@ def admin_edit_user(uid):
 def admin_delete_user(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
+    u = get_user_by_id(uid)
     delete_user(uid)
+    log_action(session['user_id'], 'soft_delete_user', uid, f'حذف المستخدم: {u["full_name"] if u else uid}')
     _auto_save(); flash('تم الحذف', 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/users/<int:uid>/restore', methods=['POST'])
+@admin_required
+def admin_restore_user(uid):
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
+    restore_user(uid)
+    log_action(session['user_id'], 'restore_user', uid, f'استعادة المستخدم: {uid}')
+    flash('تمت الاستعادة', 'success')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/users/<int:uid>/toggle-block', methods=['POST'])
@@ -259,6 +267,8 @@ def admin_toggle_block(uid):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
     result = toggle_block(uid)
     if result is not None:
+        u = get_user_by_id(uid)
+        log_action(session['user_id'], 'toggle_block', uid, f'إيقاف المستخدم: {u["full_name"] if u else uid}')
         _auto_save(); flash('تم التفعيل' if result == 0 else 'تم الإيقاف', 'success')
     return redirect(url_for('admin_users'))
 
@@ -279,6 +289,7 @@ def admin_reset_device(uid):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
     reset_device_uid(uid)
     user = get_user_by_id(uid)
+    log_action(session['user_id'], 'reset_device', uid, f'إعادة تعيين جهاز: {user["full_name"] if user else uid}')
     flash(f'تم إعادة تعيين الجهاز لـ {user["full_name"]}', 'success')
     return redirect(url_for('admin_users'))
 
@@ -400,6 +411,7 @@ def admin_register_leave():
     if uid and hours > 0:
         std, etd = set_leave(uid, hours)
         u = get_user_by_id(uid)
+        log_action(session['user_id'], 'register_leave', uid, f'رخصة {hours} ساعة')
         push_notif(uid, f"تم تسجيل رخصة {hours} ساعة. تنتهي: {etd.strftime('%Y-%m-%d %H:%M')}")
         _auto_save(); flash(f'رخصة {hours} ساعة لـ {u["full_name"]}', 'success')
     return redirect(url_for('admin_leaves'))
@@ -411,6 +423,7 @@ def admin_revoke_leave(uid):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_leaves'))
     revoke_leave(uid)
     u = get_user_by_id(uid)
+    log_action(session['user_id'], 'revoke_leave', uid, f'سحب رخصة: {u["full_name"] if u else uid}')
     push_notif(uid, "تم سحب رخصتك وإعادتك للواجب الميداني.")
     _auto_save(); flash(f'تم سحب رخصة {u["full_name"]}', 'success')
     return redirect(url_for('admin_leaves'))
@@ -425,6 +438,7 @@ def admin_approve_request(rid):
         uid, hours = result
         u = get_user_by_id(uid)
         _, etd = set_leave(uid, hours)
+        log_action(session['user_id'], 'approve_leave', uid, f'اعتماد رخصة {hours} ساعة')
         push_notif(uid, f"تم اعتماد رخصتك {hours} ساعة. تنتهي: {etd.strftime('%Y-%m-%d %H:%M')}")
         _auto_save(); flash('تم اعتماد الرخصة', 'success')
     return redirect(url_for('admin_leaves'))
@@ -436,6 +450,7 @@ def admin_reject_request(rid):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_leaves'))
     uid = reject_leave_request(rid)
     if uid:
+        log_action(session['user_id'], 'reject_leave', uid, 'رفض طلب رخصة')
         push_notif(uid, "تم رفض طلب الرخصة.")
     _auto_save(); flash('تم رفض الطلب', 'success')
     return redirect(url_for('admin_leaves'))
@@ -485,6 +500,7 @@ def admin_add_history():
     note = request.form.get('note', '').strip()
     if uid and note:
         add_history(uid, note)
+        log_action(session['user_id'], 'add_history', uid, f'تسجيل سابقة: {note[:100]}')
         push_notif(uid, f"تم تسجيل ملاحظة على حسابك من قِبل القيادة:\n{note}")
         flash('تم تسجيل الملاحظة', 'success')
     return redirect(url_for('admin_security'))
@@ -495,6 +511,7 @@ def admin_delete_history(hid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
     delete_history(hid)
+    log_action(session['user_id'], 'delete_history', hid, 'حذف سابقة')
     flash('تم حذف السابقة', 'success')
     return redirect(url_for('admin_security'))
 
@@ -504,6 +521,8 @@ def admin_security_reset_device(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
     reset_device_uid(uid)
+    u = get_user_by_id(uid)
+    log_action(session['user_id'], 'security_reset_device', uid, f'فك ربط جهاز: {u["full_name"] if u else uid}')
     flash('تم فك ربط الجهاز', 'success')
     return redirect(url_for('admin_security'))
 
@@ -511,6 +530,7 @@ def admin_security_reset_device(uid):
 @admin_required
 def admin_dismiss_alert(aid):
     db_run("DELETE FROM security_alerts WHERE id=?", (aid,))
+    log_action(session['user_id'], 'dismiss_alert', aid, 'حذف تنبيه أمني')
     flash('تم حذف التنبيه', 'success')
     return redirect(url_for('admin_security'))
 
@@ -589,6 +609,24 @@ def admin_notifications():
         mark_read(session['user_id'], unread_ids)
     return render_template('admin/notifications.html', notifications=notifs)
 
+@app.route('/admin/notifications/clear', methods=['POST'])
+@admin_required
+def admin_clear_read_notifications():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_notifications'))
+    delete_read_notifications(session['user_id'])
+    flash('تم حذف الإشعارات المقروءة', 'success')
+    return redirect(url_for('admin_notifications'))
+
+@app.route('/admin/notifications/delete-all', methods=['POST'])
+@admin_required
+def admin_delete_all_notifications():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_notifications'))
+    delete_unread_notifications(session['user_id'])
+    flash('تم حذف جميع الإشعارات', 'success')
+    return redirect(url_for('admin_notifications'))
+
 @app.route('/admin/send-message', methods=['GET','POST'])
 @admin_required
 def admin_send_message():
@@ -619,7 +657,8 @@ def employee_dashboard():
 @app.route('/employee/attendance')
 @login_required
 def employee_attendance():
-    return render_template('employee/attendance.html')
+    today = get_today_attendance(session['user_id'])
+    return render_template('employee/attendance.html', has_check_in='check_in' in today, has_check_out='check_out' in today)
 
 @app.route('/employee/check-in', methods=['POST'])
 @login_required
@@ -645,9 +684,16 @@ def handle_attendance(action):
     if lat is None or lng is None:
         return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع'}), 400
     dist = geodesic(FACILITY_LOCATION, (lat, lng)).meters
-    if dist > ALLOWED_RADIUS:
+    note = data.get('note', '')
+    is_fallback = dist > ALLOWED_RADIUS and data.get('fallback')
+    if is_fallback:
+        note = (note + ' | ' if note else '') + 'تسجيل بدون GPS (خارج النطاق)'
+        fallback_count = db_get("SELECT COUNT(*) FROM attendance WHERE user_id=? AND DATE(timestamp)=? AND note LIKE '%بدون GPS%'", (user_id, ksa().strftime('%Y-%m-%d')))[0][0]
+        if fallback_count >= 2:
+            return jsonify({'ok': False, 'msg': 'تجاوزت حد التسجيل بدون GPS لهذا اليوم (مرتان فقط)'}), 400
+    elif dist > ALLOWED_RADIUS:
         return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
-    ok, err = record_attendance(user_id, action, lat, lng)
+    ok, err = record_attendance(user_id, action, lat, lng, note)
     if not ok:
         return jsonify({'ok': False, 'msg': err}), 409
     session['last_att'] = now
@@ -787,6 +833,20 @@ def admin_restore():
     return render_template('admin/restore.html')
 
 init_db()
+try: db_run("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''")
+except: pass
+try: db_run("ALTER TABLE users ADD COLUMN is_deleted INTEGER DEFAULT 0")
+except: pass
+try:
+    if USE_PG:
+        db_run("CREATE TABLE IF NOT EXISTS audit_log (id SERIAL PRIMARY KEY, admin_id INTEGER NOT NULL, action TEXT NOT NULL, target_id INTEGER, details TEXT, created_at TEXT NOT NULL)")
+    else:
+        db_run("CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER NOT NULL, action TEXT NOT NULL, target_id INTEGER, details TEXT, created_at TEXT NOT NULL)")
+except: pass
+try: db_run("ALTER TABLE leaves ADD COLUMN is_active INTEGER DEFAULT 0")
+except: pass
+try: db_run("UPDATE leaves SET is_active=1")
+except: pass
 ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
 if not get_user('admn'):
     add_user('admn', ADMIN_PASS, 'القائد العام', 'admin')
@@ -794,9 +854,16 @@ if not get_user('admn'):
 
 backup.do_restore()
 backup.start_auto_backup()
+clear_old_audit()
 
 def _auto_save():
     threading.Thread(target=backup.do_backup, daemon=True).start()
+
+@app.route('/admin/audit-log')
+@admin_required
+def admin_audit_log():
+    logs = get_audit_log()
+    return render_template('admin/audit_log.html', logs=logs)
 
 @app.route('/admin/force-backup')
 @admin_required
