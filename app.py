@@ -1,4 +1,4 @@
-import os, secrets, uuid
+import os, secrets, uuid, time
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from geopy.distance import geodesic
 from database import *
@@ -215,11 +215,14 @@ def admin_manual_attendance():
         action = request.form.get('action', '')
         note = request.form.get('note', '')
         if uid and action in ('check_in','check_out'):
-            record_attendance(uid, action, 0, 0, f"[يدوي - القائد] {note}")
+            ok, err = record_attendance(uid, action, 0, 0, f"[يدوي - القائد] {note}")
             u = get_user_by_id(uid)
             act_ar = "حضور" if action=='check_in' else "انصراف"
-            push_notif(uid, f"تم تسجيل {act_ar} يدوياً من قِبل القائد.")
-            flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
+            if not ok:
+                flash(f'لم يتم تسجيل {act_ar} لـ {u["full_name"]}: {err}', 'warning')
+            else:
+                push_notif(uid, f"تم تسجيل {act_ar} يدوياً من قِبل القائد.")
+                flash(f'تم تسجيل {act_ar} لـ {u["full_name"]}', 'success')
         return redirect(url_for('admin_manual_attendance'))
     return render_template('admin/manual_att.html', soldiers=soldiers)
 
@@ -471,6 +474,10 @@ def employee_check_out():
 
 def handle_attendance(action):
     user_id = session['user_id']
+    now = time.time()
+    last = session.get('last_att', 0)
+    if now - last < 3:
+        return jsonify({'ok': False, 'msg': 'الرجاء الانتظار 3 ثوانٍ بين كل محاولة'}), 429
     data = request.get_json()
     if not data:
         return jsonify({'ok': False, 'msg': 'بيانات غير صالحة'}), 400
@@ -481,7 +488,10 @@ def handle_attendance(action):
     dist = geodesic(FACILITY_LOCATION, (lat, lng)).meters
     if dist > ALLOWED_RADIUS:
         return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
-    record_attendance(user_id, action, lat, lng)
+    ok, err = record_attendance(user_id, action, lat, lng)
+    if not ok:
+        return jsonify({'ok': False, 'msg': err}), 409
+    session['last_att'] = now
     verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
     return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
 

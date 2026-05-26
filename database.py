@@ -171,9 +171,22 @@ def set_device_uid(uid, device_id):
     db_run("UPDATE users SET device_uid=? WHERE id=?", (device_id, uid))
 
 # Attendance
+def get_today_attendance(user_id):
+    today = ksa().strftime('%Y-%m-%d')
+    rows = db_get("SELECT action FROM attendance WHERE user_id=? AND DATE(timestamp)=?", (user_id, today))
+    return [r[0] for r in rows]
+
 def record_attendance(user_id, action, lat, lng, note=''):
+    today_acts = get_today_attendance(user_id)
+    if action == 'check_in' and 'check_in' in today_acts:
+        return False, 'تم تسجيل الحضور مسبقاً اليوم'
+    if action == 'check_out' and 'check_out' in today_acts:
+        return False, 'تم تسجيل الانصراف مسبقاً'
+    if action == 'check_out' and 'check_in' not in today_acts:
+        return False, 'لا يمكن الانصراف قبل تسجيل الحضور'
     db_run("INSERT INTO attendance (user_id,action,latitude,longitude,timestamp,note) VALUES (?,?,?,?,?,?)",
            (user_id, action, lat, lng, ksa_str(), note))
+    return True, ''
 
 def get_report(date_str):
     rows = db_get("SELECT user_id,action,timestamp,note FROM attendance WHERE DATE(timestamp)=?", (date_str,))
