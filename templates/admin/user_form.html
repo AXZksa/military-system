@@ -5,7 +5,7 @@
     <div class="col-md-8 col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">{% if user %}<i class="bi bi-pencil ms-2"></i>تعديل بيانات{% else %}<i class="bi bi-person-plus ms-2"></i>إضافة عسكري جديد{% endif %}</h5>
+                <span>{% if user %}<i class="bi bi-pencil ms-2"></i>تعديل بيانات{% else %}<i class="bi bi-person-plus ms-2"></i>إضافة عسكري جديد{% endif %}</span>
             </div>
             <div class="card-body">
                 <form method="POST">
@@ -24,17 +24,17 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">اليوزر</label>
-                        <input type="text" name="username" class="form-control" value="{{ user.username if user else '' }}" {% if user %}required{% else %}required{% endif %}>
+                        <input type="text" name="username" class="form-control" value="{{ user.username if user else '' }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{% if user %}كلمة المرور الجديدة (اتركه فارغاً إذا لا تريد التغيير){% else %}كلمة المرور{% endif %}</label>
+                        <label class="form-label">{% if user %}كلمة المرور (اتركه فارغاً إن لم ترد التغيير){% else %}كلمة المرور{% endif %}</label>
                         <input type="text" name="password" class="form-control" {% if not user %}required{% endif %}>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">رقم الجوال</label>
                         <input type="text" name="phone_number" class="form-control" dir="ltr" value="{{ user.phone_number if user and user.phone_number else '' }}">
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">{% if user %}حفظ التعديلات{% else %}إضافة{% endif %}</button>
+                    <button type="submit" class="btn btn-gold w-100 py-2">{% if user %}<i class="bi bi-check-lg ms-1"></i> حفظ التعديلات{% else %}<i class="bi bi-plus-lg ms-1"></i> إضافة{% endif %}</button>
                 </form>
             </div>
         </div>

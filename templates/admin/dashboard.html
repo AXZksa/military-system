@@ -1,76 +1,95 @@
 {% extends "base.html" %}
 {% block title %}لوحة التحكم{% endblock %}
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-3 mb-3">
-        <div class="card stat-card bg-primary text-white">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
+    <span class="badge bg-dark px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a2744,#2a4a7f);">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">إجمالي القوة</h6><h2 class="mb-0">{{ total }}</h2></div>
-                    <i class="bi bi-people fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-people stat-icon"></i>
+                <h6>إجمالي القوة</h6>
+                <h2>{{ total }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card stat-card bg-success text-white">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a6b3c,#27ae60);">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">حاضر اليوم</h6><h2 class="mb-0">{{ rpt.present }}</h2></div>
-                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-check-circle stat-icon"></i>
+                <h6>حاضر اليوم</h6>
+                <h2>{{ rpt.present }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card stat-card bg-info text-white">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#2c3e7a,#3498db);">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">إجازة</h6><h2 class="mb-0">{{ rpt.on_leave }}</h2></div>
-                    <i class="bi bi-airplane fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-airplane stat-icon"></i>
+                <h6>إجازة</h6>
+                <h2>{{ rpt.on_leave }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card stat-card bg-danger text-white">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#7a1a1a,#e74c3c);">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">غائب</h6><h2 class="mb-0">{{ rpt.absent }}</h2></div>
-                    <i class="bi bi-x-circle fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-x-circle stat-icon"></i>
+                <h6>غائب</h6>
+                <h2>{{ rpt.absent }}</h2>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-6 mb-3">
-        <div class="card stat-card bg-warning text-dark">
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-dark" style="background:linear-gradient(135deg,#f9e479,#f1c40f);">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">بدون خروج</h6><h2 class="mb-0">{{ rpt.no_out }}</h2></div>
-                    <i class="bi bi-question-circle fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-question-circle stat-icon"></i>
+                <h6>بدون خروج</h6>
+                <h2>{{ rpt.no_out }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-3">
-        <div class="card stat-card bg-purple text-white">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white stat-card-subtle">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div><h6 class="card-title">طلبات معلقة</h6><h2 class="mb-0">{{ pending_req }}</h2></div>
-                    <i class="bi bi-inbox fs-1 opacity-50"></i>
-                </div>
+                <i class="bi bi-inbox stat-icon"></i>
+                <h6>طلبات معلقة</h6>
+                <h2>{{ pending_req }}</h2>
             </div>
         </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card text-white" style="background:linear-gradient(135deg,#7a1a6b,#8e44ad);">
+            <div class="card-body">
+                <i class="bi bi-bell stat-icon"></i>
+                <h6>إشعارات</h6>
+                <h2>{{ unread }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('admin_reports') }}" class="text-decoration-none">
+            <div class="card stat-card text-white" style="background:linear-gradient(135deg,#1a5276,#1abc9c);">
+                <div class="card-body">
+                    <i class="bi bi-file-text stat-icon"></i>
+                    <h6>تقرير مفصل</h6>
+                    <h2><i class="bi bi-arrow-left"></i></h2>
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">تقرير اليوم</h5>
-        <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-outline-primary">عرض التفاصيل</a>
+        <span><i class="bi bi-file-text ms-2"></i>تقرير اليوم — الحضور والانصراف</span>
+        <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">

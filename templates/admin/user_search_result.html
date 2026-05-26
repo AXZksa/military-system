@@ -1,58 +1,66 @@
 {% extends "base.html" %}
 {% block title %}نتيجة الاستعلام{% endblock %}
 {% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-person-badge ms-2"></i>بطاقة استعلام</h4>
+
 <div class="card">
-    <div class="card-header"><h5 class="mb-0"><i class="bi bi-person-badge ms-2"></i>بطاقة الاستعلام</h5></div>
+    <div class="card-header"><span><i class="bi bi-person ms-2"></i>{{ u.full_name }}</span></div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
-                <table class="table table-sm">
-                    <tr><th>الاسم</th><td>{{ u.full_name }}</td></tr>
-                    <tr><th>الرتبة</th><td>{{ u.rank_title or '—' }}</td></tr>
-                    <tr><th>اليوزر</th><td><code>{{ u.username }}</code></td></tr>
-                    <tr><th>رقم الجوال</th><td dir="ltr">{{ u.phone_number or 'غير مسجل' }}</td></tr>
-                    <tr><th>الحساب</th><td>{% if u.is_blocked %}<span class="badge bg-danger">موقوف</span>{% else %}<span class="badge bg-success">نشط</span>{% endif %}</td></tr>
-                    <tr><th>الجهاز</th><td>{% if u.device_uid %}<span class="badge bg-info">مرتبط</span>{% else %}<span class="badge bg-secondary">غير مرتبط</span>{% endif %}</td></tr>
-                    <tr><th>الرخصة</th><td>{% if lv %}مرخوص {{ lv.label }} ينتهي: {{ lv.end }}{% else %}غير مرخوص{% endif %}</td></tr>
+                <table class="table table-sm table-borderless">
+                    <tr><th class="text-muted" style="width:120px;">الاسم</th><td class="fw-semibold">{{ u.full_name }}</td></tr>
+                    <tr><th class="text-muted">الرتبة</th><td><span class="badge bg-secondary bg-opacity-25 text-dark px-3 py-2">{{ u.rank_title or '—' }}</span></td></tr>
+                    <tr><th class="text-muted">اليوزر</th><td><code dir="ltr">{{ u.username }}</code></td></tr>
+                    <tr><th class="text-muted">رقم الجوال</th><td dir="ltr">{{ u.phone_number or 'غير مسجل' }}</td></tr>
+                    <tr><th class="text-muted">الحساب</th><td>{% if u.is_blocked %}<span class="badge bg-danger rounded-pill">موقوف</span>{% else %}<span class="badge bg-success rounded-pill">نشط</span>{% endif %}</td></tr>
+                    <tr><th class="text-muted">الجهاز</th><td>{% if u.device_uid %}<span class="badge bg-info rounded-pill">مرتبط</span>{% else %}<span class="badge bg-secondary rounded-pill">غير مرتبط</span>{% endif %}</td></tr>
+                    <tr><th class="text-muted">الرخصة</th><td>{% if lv %}مرخوص <span class="fw-semibold">{{ lv.label }}</span> ينتهي: {{ lv.end }}{% else %}غير مرخوص{% endif %}</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
-                <h6>آخر طلبات الرخص</h6>
+                <h6 class="fw-bold"><i class="bi bi-inbox ms-1"></i>آخر طلبات الرخص</h6>
                 {% if reqs %}
                 <ul class="list-group mb-3">
                     {% for label, date, status in reqs %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ label }} - {{ date }}</span>
-                        <span class="badge {% if status=='APPROVED' %}bg-success{% elif status=='REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                        <span>{{ label }} <small class="text-muted">— {{ date }}</small></span>
+                        <span class="badge rounded-pill {% if status=='APPROVED' %}bg-success{% elif status=='REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
                             {{ {'PENDING':'معلق','APPROVED':'معتمد','REJECTED':'مرفوض'}.get(status, status) }}
                         </span>
                     </li>
                     {% endfor %}
                 </ul>
-                {% else %}<p class="text-muted">لا توجد طلبات</p>{% endif %}
+                {% else %}<p class="text-muted small">لا توجد طلبات</p>{% endif %}
 
-                <h6>السوابق</h6>
+                <h6 class="fw-bold mt-3"><i class="bi bi-journal-text ms-1"></i>السوابق</h6>
                 {% if hist %}
-                <ul class="list-group">
+                <div class="timeline">
                     {% for nid, note, cat in hist %}
-                    <li class="list-group-item"><small class="text-muted">{{ cat }}</small><br>{{ note }}</li>
+                    <div class="timeline-item">
+                        <small class="text-muted">{{ cat }}</small>
+                        <p class="mb-0">{{ note }}</p>
+                    </div>
                     {% endfor %}
-                </ul>
-                {% else %}<p class="text-muted">لا توجد سوابق</p>{% endif %}
+                </div>
+                {% else %}<p class="text-muted small">لا توجد سوابق</p>{% endif %}
             </div>
         </div>
         {% if loc %}
-        <div class="mt-3">
-            <h6>آخر موقع</h6>
-            <p>الوقت: {{ loc[0][2] }} | نوع: {% if loc[0][3]=='check_in' %}حضور{% else %}انصراف{% endif %}</p>
-            <a href="https://maps.google.com/?q={{ loc[0][0] }},{{ loc[0][1] }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-map"></i> فتح في خرائط Google
-            </a>
+        <div class="mt-3 p-3 bg-light rounded-3">
+            <h6 class="fw-bold"><i class="bi bi-geo-alt ms-1"></i>آخر موقع</h6>
+            <div class="d-flex align-items-center gap-3">
+                <span>الوقت: {{ loc[0][2] }}</span>
+                <span class="badge bg-{{ 'success' if loc[0][3]=='check_in' else 'danger' }} rounded-pill">{{ 'حضور' if loc[0][3]=='check_in' else 'انصراف' }}</span>
+                <a href="https://maps.google.com/?q={{ loc[0][0] }},{{ loc[0][1] }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill">
+                    <i class="bi bi-map ms-1"></i> خرائط Google
+                </a>
+            </div>
         </div>
         {% endif %}
     </div>
     <div class="card-footer">
-        <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">رجوع</a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-secondary rounded-pill px-4"><i class="bi bi-arrow-right ms-1"></i> رجوع</a>
     </div>
 </div>
 {% endblock %}

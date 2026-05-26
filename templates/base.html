@@ -7,140 +7,145 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     {% if session.user_id %}
-    <nav class="navbar navbar-expand-lg navbar-dark topbar">
-        <div class="container-fluid">
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
+    <nav class="navbar topbar">
+        <div class="container-fluid px-3">
+            <button class="navbar-toggler border-0 p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="bi bi-shield-fill-check ms-2"></i>منظومة توثيق الحركة الميدانية
+                <i class="bi bi-shield-fill-check"></i>
+                <span class="d-none d-sm-inline">منظومة توثيق الحركة الميدانية</span>
+                <span class="d-sm-none">المنظومة</span>
             </a>
-            <div class="d-flex align-items-center">
-                <span class="text-light ms-3 small d-none d-md-inline">
-                    <i class="bi bi-person-circle ms-1"></i>{{ session.full_name }}
-                </span>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-light small d-none d-md-inline">{{ session.full_name }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-gold btn-sm rounded-pill px-3">
                     <i class="bi bi-box-arrow-left"></i>
                 </a>
             </div>
         </div>
     </nav>
 
-    <div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="sidebar">
+    <div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="sidebar" data-bs-backdrop="false">
         <div class="offcanvas-header">
-            <h5 class="text-gold"><i class="bi bi-shield-fill-check ms-2"></i>القائمة</h5>
+            <h5 class="mb-0"><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0">
-            <div class="sidebar-user text-center py-3 border-bottom border-secondary">
-                <i class="bi bi-person-circle fs-1 text-gold"></i>
-                <p class="mt-2 mb-0 text-light">{{ session.full_name }}</p>
-                <small class="text-secondary">{{ 'قائد' if session.role == 'admin' else 'عسكري' }}</small>
+            <div class="sidebar-user-card">
+                <div class="avatar"><i class="bi bi-person"></i></div>
+                <h6>{{ session.full_name }}</h6>
+                <small>{{ 'قائد المنظومة' if session.role == 'admin' else 'عسكري' }}</small>
             </div>
-            <ul class="nav flex-column mt-2">
+            <ul class="nav flex-column mt-2 px-2">
                 {% if session.role == 'admin' %}
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if request.path == '/admin' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">
-                        <i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم
+                    <a class="sidebar-link {% if request.path == '/admin' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">
+                        <i class="bi bi-speedometer2"></i> لوحة التحكم
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/admin/users' in request.path %}active{% endif %}" href="{{ url_for('admin_users') }}">
-                        <i class="bi bi-people ms-2"></i>إدارة العساكر
+                    <a class="sidebar-link {% if '/admin/users' in request.path %}active{% endif %}" href="{{ url_for('admin_users') }}">
+                        <i class="bi bi-people"></i> إدارة العساكر
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('admin_manual_attendance') }}">
-                        <i class="bi bi-pencil-square ms-2"></i>حضور/غياب يدوي
+                    <a class="sidebar-link {% if '/admin/attendance' in request.path %}active{% endif %}" href="{{ url_for('admin_manual_attendance') }}">
+                        <i class="bi bi-pencil-square"></i> حضور/غياب يدوي
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/admin/reports' in request.path %}active{% endif %}" href="{{ url_for('admin_reports') }}">
-                        <i class="bi bi-file-text ms-2"></i>التقارير
+                    <a class="sidebar-link {% if '/admin/reports' in request.path %}active{% endif %}" href="{{ url_for('admin_reports') }}">
+                        <i class="bi bi-file-text"></i> التقارير
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/admin/leaves' in request.path %}active{% endif %}" href="{{ url_for('admin_leaves') }}">
-                        <i class="bi bi-airplane ms-2"></i>الرخص
+                    <a class="sidebar-link {% if '/admin/leaves' in request.path %}active{% endif %}" href="{{ url_for('admin_leaves') }}">
+                        <i class="bi bi-airplane"></i> الرخص
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/admin/shifts' in request.path %}active{% endif %}" href="{{ url_for('admin_shifts') }}">
-                        <i class="bi bi-calendar-check ms-2"></i>المناوبات
+                    <a class="sidebar-link {% if '/admin/shifts' in request.path %}active{% endif %}" href="{{ url_for('admin_shifts') }}">
+                        <i class="bi bi-calendar-check"></i> المناوبات
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/admin/security' in request.path %}active{% endif %}" href="{{ url_for('admin_security') }}">
-                        <i class="bi bi-shield-lock ms-2"></i>القسم الأمني
+                    <a class="sidebar-link {% if '/admin/security' in request.path %}active{% endif %}" href="{{ url_for('admin_security') }}">
+                        <i class="bi bi-shield-lock"></i> القسم الأمني
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('admin_reports_panel') }}">
-                        <i class="bi bi-exclamation-triangle ms-2"></i>البلاغات
+                    <a class="sidebar-link" href="{{ url_for('admin_reports_panel') }}">
+                        <i class="bi bi-exclamation-triangle"></i> البلاغات
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('admin_circulars') }}">
-                        <i class="bi bi-megaphone ms-2"></i>التعاميم
+                    <a class="sidebar-link" href="{{ url_for('admin_circulars') }}">
+                        <i class="bi bi-megaphone"></i> التعاميم
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('admin_send_message') }}">
-                        <i class="bi bi-chat-dots ms-2"></i>المراسلة
+                    <a class="sidebar-link" href="{{ url_for('admin_send_message') }}">
+                        <i class="bi bi-chat-dots"></i> المراسلة
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('admin_notifications') }}">
-                        <i class="bi bi-bell ms-2"></i>الإشعارات
+                    <a class="sidebar-link" href="{{ url_for('admin_notifications') }}">
+                        <i class="bi bi-bell"></i> الإشعارات
                     </a>
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link {% if '/employee' == request.path %}active{% endif %}" href="{{ url_for('employee_dashboard') }}">
-                        <i class="bi bi-house ms-2"></i>الرئيسية
+                    <a class="sidebar-link {% if '/employee' == request.path %}active{% endif %}" href="{{ url_for('employee_dashboard') }}">
+                        <i class="bi bi-house"></i> الرئيسية
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('employee_attendance') }}">
-                        <i class="bi bi-geo-alt ms-2"></i>تسجيل الحضور
+                    <a class="sidebar-link {% if '/employee/attendance' in request.path %}active{% endif %}" href="{{ url_for('employee_attendance') }}">
+                        <i class="bi bi-geo-alt"></i> تسجيل الحضور
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('employee_leave') }}">
-                        <i class="bi bi-airplane ms-2"></i>رخصتي
+                    <a class="sidebar-link {% if '/employee/leave' in request.path %}active{% endif %}" href="{{ url_for('employee_leave') }}">
+                        <i class="bi bi-airplane"></i> رخصتي
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('employee_report') }}">
-                        <i class="bi bi-exclamation-circle ms-2"></i>بلاغ عاجل
+                    <a class="sidebar-link" href="{{ url_for('employee_report') }}">
+                        <i class="bi bi-exclamation-circle"></i> بلاغ عاجل
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('employee_message_leader') }}">
-                        <i class="bi bi-chat ms-2"></i>راسل القائد
+                    <a class="sidebar-link" href="{{ url_for('employee_message_leader') }}">
+                        <i class="bi bi-chat"></i> راسل القائد
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link sidebar-link" href="{{ url_for('employee_notifications') }}">
-                        <i class="bi bi-bell ms-2"></i>الإشعارات
+                    <a class="sidebar-link" href="{{ url_for('employee_notifications') }}">
+                        <i class="bi bi-bell"></i> الإشعارات
                     </a>
                 </li>
                 {% endif %}
             </ul>
+            <div class="mt-auto p-3 border-top border-secondary border-opacity-10">
+                <small class="text-secondary d-block text-center">جميع الحقوق محفوظة &copy; 2026</small>
+            </div>
         </div>
     </div>
 
     <main class="main-content">
-        <div class="container-fluid p-4">
+        <div class="container-fluid p-3 p-lg-4">
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show">
+            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2">
+                <i class="bi {% if category=='success' %}bi-check-circle{% elif category=='danger' %}bi-x-circle{% elif category=='warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
                 {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close me-auto" data-bs-dismiss="alert"></button>
             </div>
             {% endfor %}
             {% endif %}
@@ -148,10 +153,17 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+    <style>
+        .btn-outline-gold { color: var(--gold); border: 1px solid var(--gold); background: transparent; }
+        .btn-outline-gold:hover { background: var(--gold); color: var(--navy-900); }
+        @media (min-width: 992px) {
+            .sidebar.offcanvas { transform: none !important; visibility: visible !important; }
+            .sidebar .offcanvas-header .btn-close { display: none; }
+        }
+    </style>
     {% else %}
     {% block full_content %}{% endblock %}
     {% endif %}
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}

@@ -1,25 +1,32 @@
 {% extends "base.html" %}
 {% block title %}البلاغات{% endblock %}
 {% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-exclamation-triangle ms-2"></i>البلاغات المفتوحة</h4>
+
 <div class="card">
-    <div class="card-header"><h5 class="mb-0"><i class="bi bi-exclamation-triangle ms-2"></i>البلاغات المفتوحة</h5></div>
+    <div class="card-header"><span><i class="bi bi-inbox ms-2"></i>البلاغات</span></div>
     <div class="card-body">
         {% if reports %}
         {% for r in reports %}
-        <div class="alert alert-warning">
-            <div class="d-flex justify-content-between">
-                <strong>{{ r.sender }}</strong>
+        <div class="alert alert-warning border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold"><i class="bi bi-person ms-1"></i>{{ r.sender }}</span>
                 <small class="text-muted">{{ r.date }}</small>
             </div>
-            <p class="mb-2 mt-1">{{ r.text }}</p>
+            <p class="mt-2 mb-2">{{ r.text }}</p>
             <form method="POST" action="{{ url_for('admin_reply_report', rid=r.id) }}" class="d-flex gap-2">
                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <input type="text" name="reply" class="form-control" placeholder="الرد..." required>
-                <button class="btn btn-primary btn-sm">إرسال الرد</button>
+                <input type="text" name="reply" class="form-control" placeholder="اكتب الرد..." required>
+                <button class="btn btn-primary rounded-pill px-3">إرسال الرد</button>
             </form>
         </div>
         {% endfor %}
-        {% else %}<p class="text-muted mb-0">✅ لا توجد بلاغات مفتوحة.</p>{% endif %}
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-check-circle fs-1 text-success"></i>
+            <p class="text-muted mt-2">لا توجد بلاغات مفتوحة.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
