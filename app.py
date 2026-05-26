@@ -442,7 +442,7 @@ def admin_delete_history(hid):
 
 @app.route('/admin/security/reset-device/<int:uid>', methods=['POST'])
 @admin_required
-def admin_reset_device(uid):
+def admin_security_reset_device(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_security'))
     set_device_uid(uid, None)
