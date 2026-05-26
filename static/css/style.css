@@ -1,0 +1,182 @@
+:root {
+    --sidebar-width: 260px;
+    --topbar-height: 56px;
+    --primary-dark: #0d1b2a;
+    --primary-mid: #1b2838;
+    --primary-light: #243447;
+    --gold: #c9a84c;
+    --gold-light: #e8c86a;
+    --bg-body: #f0f2f5;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg-body);
+    overflow-x: hidden;
+}
+
+.topbar {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-mid));
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    height: var(--topbar-height);
+}
+
+.sidebar {
+    background: linear-gradient(180deg, var(--primary-dark), #0a1520);
+    width: var(--sidebar-width) !important;
+    border: none;
+    top: var(--topbar-height);
+}
+
+.sidebar .offcanvas-header {
+    border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.sidebar-user {
+    background: rgba(0,0,0,.2);
+}
+
+.sidebar-link {
+    color: rgba(255,255,255,.7);
+    padding: 12px 20px;
+    font-size: 14px;
+    border-right: 3px solid transparent;
+    transition: all .2s;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+    color: var(--gold);
+    background: rgba(201, 168, 76, .1);
+    border-right-color: var(--gold);
+}
+
+.sidebar-link i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.main-content {
+    margin-top: var(--topbar-height);
+    margin-right: 0;
+    min-height: calc(100vh - var(--topbar-height));
+    transition: margin-right .3s;
+}
+
+@media (min-width: 992px) {
+    .main-content {
+        margin-right: var(--sidebar-width);
+    }
+}
+
+/* Login page */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, #1a3a5c 100%);
+    padding: 20px;
+}
+
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.login-icon {
+    font-size: 64px;
+    color: var(--gold);
+}
+
+.text-gold {
+    color: var(--gold);
+}
+
+.btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: var(--primary-dark);
+    font-weight: 600;
+    border: none;
+}
+
+.btn-gold:hover {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    color: var(--primary-dark);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.card-header {
+    background: white;
+    border-bottom: 1px solid rgba(0,0,0,.06);
+    font-weight: 600;
+}
+
+.stat-card {
+    border-radius: 12px;
+    transition: transform .2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.bg-purple {
+    background: linear-gradient(135deg, #6f42c1, #8540f5);
+}
+
+.table > :not(caption) > * > * {
+    vertical-align: middle;
+}
+
+/* Badge ring for notifications */
+.badge-ring {
+    position: relative;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+/* Offcanvas backdrop */
+.offcanvas-backdrop {
+    z-index: 1040;
+}
+
+/* Fix RTL for Bootstrap */
+.form-select {
+    background-position: left .75rem center;
+}
+
+/* Employee attendance buttons */
+#checkInBtn, #checkOutBtn {
+    padding: 20px;
+    border-radius: 16px;
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 13px;
+    }
+    .login-card {
+        padding: 24px;
+    }
+}

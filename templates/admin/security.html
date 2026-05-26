@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}القسم الأمني{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-shield-exclamation ms-2"></i>التنبيهات الأمنية</h5></div>
+            <div class="card-body p-0">
+                {% if alerts %}
+                <div class="list-group list-group-flush">
+                    {% for cat, nm, atype, detail in alerts %}
+                    <div class="list-group-item">
+                        <small class="text-muted">{{ cat }}</small>
+                        <div><strong>{{ nm or '?' }}</strong> <span class="badge bg-danger">{{ atype }}</span></div>
+                        <small>{{ detail or '' }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}<p class="text-muted p-3 mb-0">✅ لا توجد تنبيهات أمنية.</p>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-journal-plus ms-2"></i>تسجيل سابقة</h5></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_add_history') }}">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">العسكري</label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">اختر...</option>
+                            {% for sid, nm, _, _, rank, phone in soldiers %}
+                            <option value="{{ sid }}">{{ rank ~ ' / ' if rank }}{{ nm }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الملاحظة</label>
+                        <textarea name="note" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <button class="btn btn-warning w-100">تسجيل</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-journal-text ms-2"></i>السوابق المسجلة</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark"><tr><th>العسكري</th><th>الملاحظة</th><th>التاريخ</th><th></th></tr></thead>
+                <tbody>
+                    {% for hid, nm, note, cat in history %}
+                    <tr>
+                        <td>{{ nm }}</td><td>{{ note }}</td><td>{{ cat }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_delete_history', hid=hid) }}" class="d-inline">
+                                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('حذف السابقة؟')"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-phone ms-2"></i>إدارة الأجهزة</h5></div>
+    <div class="card-body">
+        <div class="row">
+            {% for sid, nm, _, _, rank, phone in soldiers %}
+            {% set u = get_user_by_id(sid) %}
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ rank ~ ' / ' if rank }}{{ nm }}</strong><br>
+                            <small class="text-muted">{{ 'مرتبط ✅' if u and u.device_uid else 'غير مرتبط' }}</small>
+                        </div>
+                        <form method="POST" action="{{ url_for('admin_reset_device', uid=sid) }}" class="d-inline">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                            <button class="btn btn-outline-warning btn-sm" {% if not u or not u.device_uid %}disabled{% endif %}>
+                                <i class="bi bi-arrow-counterclockwise"></i> فك
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
