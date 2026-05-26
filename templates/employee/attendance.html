@@ -36,11 +36,6 @@
                     </button>
                     {% endif %}
                 </div>
-                <div class="mt-2">
-                    <button id="fallbackBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="handleNoGPS()" {% if has_check_out %}disabled{% endif %}>
-                        <i class="bi bi-geo-alt-slash ms-1"></i> تسجيل بدون GPS
-                    </button>
-                </div>
                 <div class="mt-3 p-3 rounded-3" style="background:var(--bg-tertiary);">
                     <small class="text-muted d-flex align-items-center gap-2">
                         <i class="bi bi-info-circle"></i>
@@ -120,9 +115,9 @@ function handleAttendance(action) {
             setLoading(false);
             btn.disabled = false;
             var msgs = {
-                1: 'تم رفض إذن الموقع. استخدم زر "تسجيل بدون GPS".',
-                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS أو استخدم الزر البديل.',
-                3: 'انتهت المهلة. حاول مرة أخرى أو استخدم الزر البديل.'
+                1: 'تم رفض إذن الموقع. تأكد من تفعيل GPS وحاول مرة أخرى.',
+                2: 'تعذر تحديد الموقع. تأكد من تفعيل GPS وحاول مرة أخرى.',
+                3: 'انتهت المهلة. حاول مرة أخرى.'
             };
             setStatus('danger', '<i class="bi bi-x-circle"></i> ' + (msgs[err.code] || 'خطأ في تحديد الموقع'));
         },
@@ -130,13 +125,6 @@ function handleAttendance(action) {
     );
 }
 
-function handleNoGPS() {
-    if (!confirm('تسجيل بدون GPS؟ سيتم توثيق المحاولة.')) return;
-    setStatus('warning', '<i class="bi bi-exclamation-triangle"></i> يتم التسجيل بدون GPS...');
-    var action = hasCheckIn ? 'check_out' : 'check_in';
-    var fallbackLat = facilityLat + (Math.random() - 0.5) * 0.0001;
-    var fallbackLng = facilityLng + (Math.random() - 0.5) * 0.0001;
-    sendAttendance(action, fallbackLat, fallbackLng, true);
-}
+
 </script>
 {% endblock %}

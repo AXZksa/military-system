@@ -370,14 +370,8 @@ def add_device_uid(uid, device_id):
     cur = get_user_by_id(uid)
     devices = cur['device_uid'] or ''
     devs = [d for d in devices.split(',') if d]
-    token = device_id.split('::', 1)[0] if '::' in device_id else device_id
-    fp = device_id.split('::', 1)[1] if '::' in device_id else device_id
     for stored in devs:
-        if stored == device_id or stored == token or stored == fp:
-            if stored != device_id:
-                devs.remove(stored)
-                devs.append(device_id)
-                db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), uid))
+        if stored == device_id:
             return
     if len(devs) >= 2:
         devs.pop(0)

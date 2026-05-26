@@ -35,7 +35,7 @@
                         <label class="form-label">رقم الجوال</label>
                         <input type="text" name="phone_number" class="form-control" dir="ltr" value="{{ user.phone_number if user and user.phone_number else '' }}">
                     </div>
-                    <button type="submit" class="btn btn-gold w-100 py-2">{% if user %}<i class="bi bi-check-lg ms-1"></i> حفظ التعديلات{% else %}<i class="bi bi-plus-lg ms-1"></i> إضافة{% endif %}</button>
+                    <button type="submit" class="btn btn-save">{% if user %}<i class="bi bi-check-lg ms-1"></i> حفظ التعديلات{% else %}<i class="bi bi-plus-lg ms-1"></i> إضافة{% endif %}</button>
                 </form>
             </div>
         </div>

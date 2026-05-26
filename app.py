@@ -1,5 +1,5 @@
 import os, secrets, uuid, time, base64, html, io, json, sqlite3, threading, datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from geopy.distance import geodesic
@@ -129,7 +129,6 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip().lower()
         password = request.form.get('password', '')
-        device_fp = request.form.get('device_fp', '')
         user = get_user(username)
         if not user or not check_password(user['password'], password):
             flash('بيانات الدخول غير صحيحة', 'danger')
@@ -137,31 +136,23 @@ def login():
         if user['is_blocked']:
             flash('هذا الحساب موقوف. تواصل مع القائد.', 'danger')
             return render_template('login.html')
+        device_token = request.cookies.get('device_token', '')
+        if not device_token:
+            device_token = secrets.token_hex(32)
         if user['device_uid']:
-            devs = user['device_uid'].split(',')
-            if device_fp:
-                parts = device_fp.split('::', 1)
-                token = parts[0] if len(parts) > 1 else ''
-                fp = parts[1] if len(parts) > 1 else device_fp
-                combined = token + '::' + fp
-                matched = False
-                for stored in devs:
-                    if stored == combined or stored == token or stored == fp:
-                        matched = True
-                        if stored != combined:
-                            devs.remove(stored)
-                            devs.append(combined)
-                            db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(devs), user['id']))
-                        break
-                if not matched:
-                    add_device_uid(user['id'], combined)
-                    admins = get_admin_ids()
-                    for (aid,) in admins:
-                        push_notif(aid, f"⚠️ تنبيه: جهاز جديد لحساب {user['full_name']}")
-        elif device_fp:
-            parts = device_fp.split('::', 1)
-            combined = device_fp if len(parts) == 1 else device_fp
-            add_device_uid(user['id'], combined)
+            stored_tokens = [d.strip() for d in user['device_uid'].split(',') if d.strip()]
+            if device_token not in stored_tokens:
+                if len(stored_tokens) >= 2:
+                    session.clear()
+                    flash('تم تجاوز الحد المسموح به من الأجهزة (جهازان كحد أقصى). للدعم تواصل مع الإدارة.', 'danger')
+                    return render_template('login.html')
+                stored_tokens.append(device_token)
+                db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(stored_tokens), user['id']))
+                admins = get_admin_ids()
+                for (aid,) in admins:
+                    push_notif(aid, f"⚠️ تنبيه: جهاز جديد لحساب {user['full_name']}")
+        else:
+            db_run("UPDATE users SET device_uid=? WHERE id=?", (device_token, user['id']))
         if not user['password'].startswith('$2'):
             db_run("UPDATE users SET password=? WHERE id=?", (hash_password(password), user['id']))
         session.clear()
@@ -172,7 +163,9 @@ def login():
         session['user_avatar'] = user.get('avatar', '')
         session.permanent = True
         redirect_url = url_for('admin_dashboard' if user['role'] == 'admin' else 'employee_dashboard')
-        return render_template('login_loading.html', redirect_url=redirect_url)
+        resp = make_response(render_template('login_loading.html', redirect_url=redirect_url))
+        resp.set_cookie('device_token', device_token, max_age=365*24*3600, httponly=True, samesite='Lax')
+        return resp
     return render_template('login.html')
 
 @app.route('/logout')
@@ -746,14 +739,7 @@ def handle_attendance(action):
     if lat is None or lng is None:
         return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع'}), 400
     dist = geodesic(FACILITY_LOCATION, (lat, lng)).meters
-    note = data.get('note', '')
-    is_fallback = dist > ALLOWED_RADIUS and data.get('fallback')
-    if is_fallback:
-        note = (note + ' | ' if note else '') + 'تسجيل بدون GPS (خارج النطاق)'
-        fallback_count = db_get("SELECT COUNT(*) FROM attendance WHERE user_id=? AND DATE(timestamp)=? AND note LIKE '%بدون GPS%'", (user_id, ksa().strftime('%Y-%m-%d')))[0][0]
-        if fallback_count >= 2:
-            return jsonify({'ok': False, 'msg': 'تجاوزت حد التسجيل بدون GPS لهذا اليوم (مرتان فقط)'}), 400
-    elif dist > ALLOWED_RADIUS:
+    if dist > ALLOWED_RADIUS:
         return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
     ok, err = record_attendance(user_id, action, lat, lng, note)
     if not ok:
