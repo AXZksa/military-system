@@ -2,23 +2,28 @@
 {% from "macros/report_macros.html" import report_row %}
 {% block title %}لوحة التحكم{% endblock %}
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2"></i>لوحة التحكم</h4>
-        <div class="d-flex gap-2">
-            <form method="POST" action="{{ url_for('admin_system_lock') }}" class="d-inline">
-                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                <button class="btn btn-sm {% if system_locked %}btn-success{% else %}btn-outline-danger{% endif %} rounded-pill px-3" title="{% if system_locked %}فتح النظام{% else %}قفل النظام{% endif %}">
-                    <i class="bi {% if system_locked %}bi-unlock{% else %}bi-lock-fill{% endif %} ms-1"></i>
-                    {% if system_locked %}مفتوح{% else %}مقفل{% endif %}
-                </button>
-            </form>
-            <span class="badge bg-tertiary px-3 py-2"><i class="bi bi-clock ms-1"></i>{{ now }}</span>
-        </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2" style="color:var(--accent-green);"></i>لوحة التحكم</h4>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('admin_force_backup') }}" class="d-inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" title="نسخ احتياطي">
+                <i class="bi bi-cloud-arrow-up"></i>
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_system_lock') }}" class="d-inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm px-3 rounded-pill fw-bold {% if system_locked %}btn-success{% else %}btn-danger{% endif %}" title="{% if system_locked %}فتح النظام{% else %}قفل النظام{% endif %}">
+                <i class="bi {% if system_locked %}bi-unlock{% else %}bi-lock-fill{% endif %} ms-1"></i>
+                {% if system_locked %}مفتوح{% else %}مقفل{% endif %}
+            </button>
+        </form>
     </div>
+</div>
 
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-gold">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-gold">
             <div class="card-body">
                 <i class="bi bi-people stat-icon"></i>
                 <h6>إجمالي القوة</h6>
@@ -26,47 +31,47 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-green">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-green">
             <div class="card-body">
                 <i class="bi bi-check-circle stat-icon"></i>
                 <h6>حاضر اليوم</h6>
-                <h2 class="text-success">{{ rpt.present }}</h2>
+                <h2>{{ rpt.present }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-blue">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-blue">
             <div class="card-body">
                 <i class="bi bi-airplane stat-icon"></i>
                 <h6>إجازة</h6>
-                <h2 class="text-info">{{ rpt.on_leave }}</h2>
+                <h2>{{ rpt.on_leave }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-red">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-red">
             <div class="card-body">
                 <i class="bi bi-x-circle stat-icon"></i>
                 <h6>غائب</h6>
-                <h2 class="text-danger">{{ rpt.absent }}</h2>
+                <h2>{{ rpt.absent }}</h2>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-orange">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-orange">
             <div class="card-body">
                 <i class="bi bi-question-circle stat-icon"></i>
                 <h6>بدون خروج</h6>
-                <h2 class="text-warning">{{ rpt.no_out }}</h2>
+                <h2>{{ rpt.no_out }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-gold">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-purple">
             <div class="card-body">
                 <i class="bi bi-inbox stat-icon"></i>
                 <h6>طلبات معلقة</h6>
@@ -74,22 +79,22 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="card stat-card stat-card-green">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card stat-card-blue">
             <div class="card-body">
                 <i class="bi bi-bell stat-icon"></i>
-                <h6>إشعارات</h6>
+                <h6>إشعارات غير مقروءة</h6>
                 <h2>{{ unread }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg-3">
         <a href="{{ url_for('admin_reports') }}" class="text-decoration-none">
-            <div class="card stat-card stat-card-blue">
+            <div class="stat-card stat-card-green">
                 <div class="card-body">
                     <i class="bi bi-file-text stat-icon"></i>
-                    <h6>تقرير مفصل</h6>
-                    <h2><i class="bi bi-arrow-left"></i></h2>
+                    <h6>التقرير المفصل</h6>
+                    <h2><i class="bi bi-arrow-left fs-2"></i></h2>
                 </div>
             </div>
         </a>
@@ -97,22 +102,24 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-5">
+    <div class="col-lg-5">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-pie-chart ms-2"></i>نسبة الحضور والغياب</div>
-            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
-                <canvas id="attendanceChart" width="220" height="220" style="max-width:240px;max-height:240px;"></canvas>
+            <div class="card-header">
+                <i class="bi bi-pie-chart ms-2" style="color:var(--accent-green);"></i>نسبة الحضور والغياب
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
+                <canvas id="attendanceChart" width="240" height="240" style="max-width:260px;max-height:260px;"></canvas>
             </div>
         </div>
     </div>
-    <div class="col-md-7">
+    <div class="col-lg-7">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-file-text ms-2"></i>تقرير اليوم — الحضور والانصراف</span>
+                <span><i class="bi bi-file-text ms-2" style="color:var(--accent-green);"></i>تقرير اليوم — الحضور والانصراف</span>
                 <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive" style="max-height:320px;overflow-y:auto;">
+                <div class="table-responsive" style="max-height:340px;overflow-y:auto;">
                     <table class="table table-hover mb-0">
                         <thead class="table-dark">
                             <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
@@ -141,25 +148,26 @@
         return;
     }
     var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    var chart = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['حاضر', 'غائب', 'إجازة', 'بدون خروج'],
             datasets: [{
                 data: [present, absent, onLeave, noOut],
-                backgroundColor: ['#2ea043', '#da3633', '#58a6ff', '#d29922'],
-                borderWidth: 0
+                backgroundColor: ['#22c55e', '#ef4444', '#3b82f6', '#f97316'],
+                borderWidth: 0,
+                hoverOffset: 8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            cutout: '65%',
+            cutout: '70%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: isDark ? '#e6edf3' : '#1a1a2e',
+                        color: isDark ? '#e2e8f0' : '#0f172a',
                         font: { family: 'Tajawal', size: 12 },
                         padding: 16,
                         usePointStyle: true,
@@ -177,8 +185,12 @@
     });
     var obs = new MutationObserver(function() {
         var d = document.documentElement.getAttribute('data-theme') !== 'light';
-        chart.options.plugins.legend.labels.color = d ? '#e6edf3' : '#1a1a2e';
-        chart.update();
+        Chart.instances.forEach(function(chart) {
+            if (chart.options.plugins && chart.options.plugins.legend) {
+                chart.options.plugins.legend.labels.color = d ? '#e2e8f0' : '#0f172a';
+                chart.update();
+            }
+        });
     });
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();

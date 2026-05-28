@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" style="background:#0b0f14;">
+<html lang="ar" dir="rtl" data-theme="dark" style="background:#080c12;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0b0f14">
+    <meta name="theme-color" content="#080c12">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,12 +14,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <style>#nprogress-bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;background:linear-gradient(90deg,var(--accent-green),var(--accent-blue));transform:translateX(-100%);transition:transform .3s ease;pointer-events:none;}#nprogress-bar.loading{transform:translateX(-30%);transition:transform .8s ease;}#nprogress-bar.done{transform:translateX(0);transition:transform .15s ease;}</style>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="page-loader" id="pageLoader">
-        <div class="spinner"></div>
+        <div class="loader-ring"></div>
         <small class="text-muted">جاري التحميل...</small>
     </div>
     <div id="nprogress-bar"></div>
@@ -28,14 +27,18 @@
     <nav class="navbar topbar">
         <div class="container-fluid px-3">
             <button class="btn-icon" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
-                <i class="bi bi-list fs-4"></i>
+                <i class="bi bi-list fs-5"></i>
             </button>
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="bi bi-shield-fill-check"></i>
-                <span>منظومة توثيق الحركة الميدانية</span>
+                <span>توثيق ميداني</span>
             </a>
             <div class="d-flex align-items-center gap-2">
-                <span class="text-secondary small d-none d-md-inline">{{ session.full_name }}</span>
+                <div class="live-clock d-none d-md-flex" id="liveClock">
+                    <span class="clock-time" id="clockTime">00:00</span>
+                    <span class="clock-date" id="clockDate">---</span>
+                </div>
+                <span class="text-secondary small d-none d-md-inline fw-semibold">{{ session.full_name }}</span>
                 <button class="btn-icon" id="themeToggle" title="تبديل السمة">
                     <i class="bi bi-moon-stars"></i>
                 </button>
@@ -62,6 +65,11 @@
                 </a>
                 <h6><a href="{{ url_for('profile') }}" class="text-decoration-none text-reset">{{ session.full_name }}</a></h6>
                 <small>{{ 'قائد المنظومة' if session.role == 'admin' else 'عسكري' }}</small>
+                <div class="mt-2">
+                    <div class="live-clock justify-content-center" id="sidebarClock">
+                        <span class="clock-time" id="sClockTime">00:00</span>
+                    </div>
+                </div>
                 {% if session.role == 'admin' %}
                 <form method="POST" action="{{ url_for('admin_reset_self_device') }}" class="mt-2" onsubmit="return confirm('إعادة تعيين أجهزتك المسجلة؟')">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
@@ -179,7 +187,7 @@
             </ul>
         </div>
         <div class="sidebar-footer">
-            <small class="text-muted d-block text-center" style="font-size:10px;">الحقوق ترجع الى قسم المعلومات - سلاح النقل</small>
+            <small class="text-muted d-block text-center" style="font-size:10px;">حقوق الموقع — قسم المعلومات</small>
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -187,9 +195,10 @@
     <main class="main-content" id="mainContent">
         <div class="container-fluid p-3 p-lg-4">
             {% if session.role == 'admin' and startup_warning %}
-            <div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3">
+            <div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm mb-3 alert-dismissible fade show" id="startupWarning">
                 <i class="bi bi-exclamation-triangle fs-5"></i>
                 <span>{{ startup_warning }}</span>
+                <button type="button" class="btn-close me-auto" data-bs-dismiss="alert"></button>
             </div>
             {% endif %}
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -219,11 +228,32 @@
     </script>
     {% endif %}
     <script>
-    /* ── Page navigation progress bar ── */
+    /* ── Live clock ── */
+    (function() {
+        function pad(n) { return n < 10 ? '0' + n : n; }
+        var days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+        var mons = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        var ct = document.getElementById('clockTime');
+        var cd = document.getElementById('clockDate');
+        var sc = document.getElementById('sClockTime');
+        function tick() {
+            var d = new Date();
+            d.setHours(d.getHours() + 3);
+            var h = pad(d.getHours()), m = pad(d.getMinutes()), s = pad(d.getSeconds());
+            var t = h + ':' + m + ':' + s;
+            var dt = days[d.getDay()] + ' — ' + d.getDate() + ' ' + mons[d.getMonth()] + ' ' + d.getFullYear();
+            if (ct) ct.textContent = t;
+            if (cd) cd.textContent = dt;
+            if (sc) sc.textContent = h + ':' + m;
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+
+    /* ── Progress bar ── */
     (function() {
         var bar = document.getElementById('nprogress-bar');
         if (!bar) return;
-        var inProgress = false;
         var links = document.querySelectorAll('a:not([target="_blank"]):not([href^="#"]):not([href^="javascript"]):not([download])');
         for (var i = 0; i < links.length; i++) {
             (function(l) {
@@ -245,6 +275,7 @@
         setTimeout(function() { bar.classList.remove('done'); }, 300);
     })();
 
+    /* ── Theme toggle ── */
     (function() {
         var html = document.documentElement;
         var saved = localStorage.getItem('theme');
@@ -259,49 +290,34 @@
         });
     })();
 
+    /* ── Sidebar ── */
     (function() {
         var sidebar = document.getElementById('sidebar');
         var overlay = document.getElementById('sidebarOverlay');
         var toggleBtn = document.getElementById('sidebarToggle');
         var closeBtn = document.getElementById('sidebarClose');
-        var mainContent = document.getElementById('mainContent');
         if (!sidebar || !toggleBtn) return;
-
         function isDesktop() { return window.innerWidth >= 992; }
-
         function openSidebar() {
             sidebar.classList.add('open');
             if (!isDesktop()) overlay.classList.add('show');
         }
-
         function closeSidebar() {
             sidebar.classList.remove('open');
             overlay.classList.remove('show');
         }
-
         toggleBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
+            if (sidebar.classList.contains('open')) closeSidebar();
+            else openSidebar();
         });
-
         if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
-
         if (isDesktop()) sidebar.classList.add('open');
-
         window.addEventListener('resize', function() {
-            if (isDesktop()) {
-                sidebar.classList.add('open');
-                overlay.classList.remove('show');
-            } else {
-                sidebar.classList.remove('open');
-            }
+            if (isDesktop()) { sidebar.classList.add('open'); overlay.classList.remove('show'); }
+            else { sidebar.classList.remove('open'); }
         });
-
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeSidebar();
         });

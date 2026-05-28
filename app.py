@@ -1060,7 +1060,7 @@ def admin_audit_log():
     logs = get_audit_log()
     return render_template('admin/audit_log.html', logs=logs)
 
-@app.route('/admin/force-backup')
+@app.route('/admin/force-backup', methods=['GET','POST'])
 @admin_required
 def admin_force_backup():
     _auto_save()
