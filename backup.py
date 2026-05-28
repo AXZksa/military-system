@@ -27,6 +27,7 @@ TABLES_MAP = {
 }
 
 LOCK = threading.Lock()
+RESTORE_ATTEMPTED = False  # prevents re-trying restore on every startup
 
 def _gh_headers():
     return {'Authorization': f'token {GH_TOKEN}', 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'military-system'}
@@ -40,6 +41,7 @@ def _fetch_api():
     except HTTPError as e:
         if e.code == 404: return None, None
         return None, None
+    except: return None, None
 
 def _push_api(content, sha=None):
     if not GH_TOKEN: return False
@@ -107,33 +109,54 @@ def do_backup():
         except: return False
 
 def do_restore():
+    global RESTORE_ATTEMPTED
     from database import db_get, db_run
+
+    if RESTORE_ATTEMPTED:
+        return True  # already tried, don't try again
+
     with LOCK:
         try:
-            users = db_get("SELECT COUNT(*) FROM users")
-            if users and users[0][0] > 5: return True
-        except: pass
-    data = None
-    src = ''
-    if GH_TOKEN:
-        d, _ = _fetch_api() or (None, None)
-        if d: data, src = d, 'github_api'
-    if not data:
-        d = _fetch_raw()
-        if d: data, src = d, 'github_raw'
-    if not data:
-        d = _fetch_local()
-        if d: data, src = d, 'local'
-    if data:
-        import_all(data)
-        return True
-    return False
+            RESTORE_ATTEMPTED = True
+            # Check if we already have meaningful data
+            user_count = db_get("SELECT COUNT(*) FROM users")[0][0]
+            att_count = db_get("SELECT COUNT(*) FROM attendance")[0][0]
+            if user_count > 3 or att_count > 10:
+                return True  # data already exists, no restore needed
+
+            data = None
+            src = ''
+
+            # Try GitHub API (needs GH_TOKEN)
+            if GH_TOKEN:
+                d, _ = _fetch_api() or (None, None)
+                if d: data, src = d, 'github_api'
+
+            # Try raw GitHub (public repo, no token needed)
+            if not data:
+                d = _fetch_raw()
+                if d: data, src = d, 'github_raw'
+
+            # Try local file
+            if not data:
+                d = _fetch_local()
+                if d: data, src = d, 'local'
+
+            if data:
+                import_all(data)
+                # Verify restore worked
+                new_count = db_get("SELECT COUNT(*) FROM users")[0][0]
+                return new_count > 0
+
+            return False
+        except:
+            return False
 
 def get_backup_status():
     return {
         'has_token': bool(GH_TOKEN),
         'github_ok': bool(GH_TOKEN),
-        'local_ok': os.path.exists(LOCAL) if os.path.exists(LOCAL) else False,
+        'local_ok': os.path.exists(LOCAL),
         'local_path': LOCAL,
         'raw_url': RAWBASE,
     }

@@ -280,11 +280,17 @@ def admin_dashboard():
 def admin_users():
     soldiers = get_soldiers()
     device_map = {}
+    impact_map = {}
     for sid, _, _, _, _, _ in soldiers:
         u = get_user_by_id(sid)
         if u and u.get('device_uid'):
             device_map[sid] = True
-    return render_template('admin/users.html', soldiers=soldiers, user_device_map=device_map)
+        att = db_get("SELECT COUNT(*) FROM attendance WHERE user_id=?", (sid,))[0][0]
+        lv = db_get("SELECT COUNT(*) FROM leaves WHERE user_id=?", (sid,))[0][0]
+        hr = db_get("SELECT COUNT(*) FROM history_records WHERE user_id=?", (sid,))[0][0]
+        nr = db_get("SELECT COUNT(*) FROM notifications WHERE user_id=?", (sid,))[0][0]
+        impact_map[sid] = {'attendance': att, 'leaves': lv, 'history': hr, 'notifications': nr}
+    return render_template('admin/users.html', soldiers=soldiers, user_device_map=device_map, impact_map=impact_map)
 
 @app.route('/admin/users/add', methods=['GET','POST'])
 @admin_required
@@ -1027,7 +1033,6 @@ except: pass
 try: db_run("UPDATE leaves SET is_active=1")
 except: pass
 ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
-# Try to restore from any available backup source FIRST
 restore_ok = backup.do_restore()
 if not get_user('admn'):
     add_user('admn', ADMIN_PASS, 'القائد العام', 'admin')
@@ -1037,18 +1042,40 @@ backup.start_auto_backup()
 clear_old_audit()
 
 # ── Startup integrity check ──
+# CRITICAL: On Render, SQLite file is EPHEMERAL — wiped on every deploy/restart.
+# The only permanent solutions are:
+#   1. PostgreSQL (set DATABASE_URL env var on Render) — RECOMMENDED
+#   2. GitHub backup (set GH_TOKEN env var) — fallback
 STARTUP_WARNING = ''
+_IS_RENDER = bool(os.getenv('RENDER'))
+_IS_SQLITE = not USE_PG
 try:
     emp_count = db_get("SELECT COUNT(*) FROM users WHERE role='employee' AND (is_deleted IS NULL OR is_deleted=0)")[0][0]
     admin_count = db_get("SELECT COUNT(*) FROM users WHERE role='admin'")[0][0]
+    att_count = db_get("SELECT COUNT(*) FROM attendance")[0][0]
+
+    # Case 1: No employees, admin exists, restore failed — critical data loss
     if emp_count == 0 and admin_count > 0 and not restore_ok:
-        STARTUP_WARNING = '⚠️ لم يتم العثور على نسخة احتياطية! النظام يعمل بدون بيانات عسكريين.'
-        if os.getenv('RENDER') and not USE_PG:
-            STARTUP_WARNING += ' استخدم PostgreSQL (أضف DATABASE_URL) أو عيّن GH_TOKEN لحفظ البيانات.'
+        STARTUP_WARNING = '⚠️  فقدان بيانات العسكريين'
+        if _IS_RENDER and _IS_SQLITE:
+            STARTUP_WARNING += ' — تم مسح قاعدة البيانات (SQLite) أثناء إعادة النشر على Render. الحل: أضف متغير DATABASE_URL=postgres://... في إعدادات Render.'
+
+    # Case 2: Data exists but no backup mechanism — will be lost on next deploy
+    elif _IS_RENDER and _IS_SQLITE:
+        if emp_count > 0 or att_count > 0:
+            STARTUP_WARNING = '⚠️  خطر فقدان البيانات'
+            STARTUP_WARNING += ' — النظام يعمل على SQLite في Render. سيتم مسح جميع البيانات عند إعادة النشر.'
+            STARTUP_WARNING += ' الحل الفوري: أضف متغير DATABASE_URL=postgres://... في Render Dashboard → Environment.'
+            if not backup.GH_TOKEN:
+                STARTUP_WARNING += ' أو عيّن GH_TOKEN للنسخ الاحتياطي.'
         elif not backup.GH_TOKEN:
-            STARTUP_WARNING += ' عيّن المتغير GH_TOKEN لتفعيل النسخ الاحتياطي.'
+            STARTUP_WARNING = '⚠️  بيانات غير محفوظة'
+            STARTUP_WARNING += ' — لم يتم العثور على بيانات عسكريين. أضف DATABASE_URL (PostgreSQL) أو عيّن GH_TOKEN.'
+
+    # Case 3: No GH_TOKEN (backup won't work)
     elif not backup.GH_TOKEN and not USE_PG:
-        STARTUP_WARNING = '⚠️ لم يتم تعيين GH_TOKEN — البيانات لن تصمد عند إعادة النشر على Render. أضف PostgreSQL أو عيّن GH_TOKEN.'
+        STARTUP_WARNING = '⚠️  النسخ الاحتياطي غير مفعل'
+        STARTUP_WARNING += ' — عيّن المتغير GH_TOKEN لتفعيل النسخ الاحتياطي التلقائي إلى GitHub.'
 except: pass
 
 def _auto_save():

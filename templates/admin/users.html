@@ -49,7 +49,8 @@
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                                 <button class="btn btn-sm btn-outline-info rounded-pill" title="إعادة تعيين الجهاز"><i class="bi bi-phone"></i></button>
                             </form>
-                            <button class="btn btn-sm btn-danger rounded-pill" onclick="showDeleteModal({{ sid }}, '{{ un }}', '{{ nm }}')" title="حذف"><i class="bi bi-trash"></i></button>
+                            {% set imp = impact_map.get(sid, {'attendance':0,'leaves':0,'history':0,'notifications':0}) %}
+                            <button class="btn btn-sm btn-danger rounded-pill" onclick="showDeleteModal({{ sid }}, '{{ un }}', '{{ nm }}', {{ imp.attendance }}, {{ imp.leaves }}, {{ imp.history }}, {{ imp.notifications }})" title="حذف"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -71,8 +72,8 @@
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="alert alert-danger py-3">
                         <i class="bi bi-shield-exclamation fs-4 d-block mb-2 text-center"></i>
-                        <p class="mb-1 fw-bold text-center" id="deleteWarning">سيتم حذف العسكري وجميع سجلاته المرتبطة</p>
-                        <p class="mb-0 small text-center">هذه العملية غير قابلة للتراجع المباشر. يمكنك استعادة العسكري من صفحة "المحذوفون".</p>
+                        <p class="mb-1 fw-bold text-center" id="deleteWarning">🔴 حذف العسكري وجميع سجلاته</p>
+                        <p class="mb-0 small text-center">العملية غير قابلة للتراجع المباشر. يمكن الاستعادة من المحذوفون.</p>
                     </div>
                     <div class="card bg-light mb-3">
                         <div class="card-body py-2">
@@ -83,6 +84,23 @@
                             <div class="d-flex justify-content-between mt-1">
                                 <span>اليوزر:</span>
                                 <span><code id="deleteUsername">—</code></span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>سجلات الحضور:</span>
+                                <span class="fw-bold" id="impAttendance">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>الرخص:</span>
+                                <span class="fw-bold" id="impLeaves">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>السوابق:</span>
+                                <span class="fw-bold" id="impHistory">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>الإشعارات:</span>
+                                <span class="fw-bold" id="impNotifications">0</span>
                             </div>
                         </div>
                     </div>
@@ -103,10 +121,14 @@
 </div>
 
 <script>
-function showDeleteModal(uid, username, fullName) {
+function showDeleteModal(uid, username, fullName, att, lv, hist, notifs) {
     document.getElementById('deleteForm').action = '/admin/users/' + uid + '/delete';
     document.getElementById('deleteName').textContent = fullName;
     document.getElementById('deleteUsername').textContent = username;
+    document.getElementById('impAttendance').textContent = att || 0;
+    document.getElementById('impLeaves').textContent = lv || 0;
+    document.getElementById('impHistory').textContent = hist || 0;
+    document.getElementById('impNotifications').textContent = notifs || 0;
     document.getElementById('confirmName').value = '';
     document.getElementById('deleteConfirmBtn').disabled = true;
     var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
