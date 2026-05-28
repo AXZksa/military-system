@@ -1,5 +1,5 @@
 import os, secrets, uuid, time, base64, html, io, json, sqlite3, threading, datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file, make_response, after_this_request
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file, make_response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from geopy.distance import geodesic
@@ -25,9 +25,6 @@ def add_security_headers(resp):
         resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     if resp.status_code == 200 and 'text/html' in resp.content_type:
         resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-    if resp.content_type and 'text/' in resp.content_type and len(resp.data) > 500:
-        resp.headers['Content-Encoding'] = 'gzip'
-        resp.set_data(gzip.compress(resp.data, compresslevel=6))
     return resp
 
 def get_ip():
