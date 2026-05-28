@@ -1,5 +1,5 @@
 import os, secrets, uuid, time, base64, html, io, json, sqlite3, threading, datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, send_file, make_response, after_this_request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from geopy.distance import geodesic
@@ -13,6 +13,22 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.permanent_session_lifetime = datetime.timedelta(hours=8)
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["30/minute"])
+
+@app.after_request
+def add_security_headers(resp):
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['X-Frame-Options'] = 'DENY'
+    resp.headers['X-XSS-Protection'] = '1; mode=block'
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['Permissions-Policy'] = 'geolocation=(self), camera=(), microphone=()'
+    if request.is_secure:
+        resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    if resp.status_code == 200 and 'text/html' in resp.content_type:
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    if resp.content_type and 'text/' in resp.content_type and len(resp.data) > 500:
+        resp.headers['Content-Encoding'] = 'gzip'
+        resp.set_data(gzip.compress(resp.data, compresslevel=6))
+    return resp
 
 def get_ip():
     if request.headers.get('X-Forwarded-For'):
@@ -36,8 +52,13 @@ def inject_globals():
     locked = False
     if session.get('role') == 'admin':
         locked = get_setting('system_locked', '0') == '1'
+    try:
+        sw = STARTUP_WARNING
+    except:
+        sw = ''
     return {
         'system_locked_global': locked,
+        'startup_warning': sw,
         'now': ksa().strftime('%H:%M'),
         'facility_lat': FACILITY_LOCATION[0],
         'facility_lng': FACILITY_LOCATION[1],
@@ -50,6 +71,8 @@ def not_found(e):
 
 @app.errorhandler(403)
 def forbidden(e):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
     return render_template('errors/403.html'), 403
 
 @app.errorhandler(500)
@@ -316,9 +339,20 @@ def admin_delete_user(uid):
     if request.form.get('_csrf', '') != session.get('csrf_token', ''):
         flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_users'))
     u = get_user_by_id(uid)
+    if not u:
+        flash('المستخدم غير موجود', 'danger'); return redirect(url_for('admin_users'))
+    confirm = request.form.get('confirm_name', '').strip()
+    if confirm != u['username']:
+        flash('❌ حذف ملغي: اسم المستخدم غير مطابق. اكتب اسم المستخدم بالضبط لتأكيد الحذف.', 'danger')
+        return redirect(url_for('admin_users'))
+    att_count = db_get("SELECT COUNT(*) FROM attendance WHERE user_id=?", (uid,))[0][0]
+    leave_count = db_get("SELECT COUNT(*) FROM leaves WHERE user_id=?", (uid,))[0][0]
+    hist_count = db_get("SELECT COUNT(*) FROM history_records WHERE user_id=?", (uid,))[0][0]
+    log_action(session['user_id'], 'soft_delete_user', uid,
+        f'حذف العسكري: {u["full_name"]} ({u["username"]}) | حضور: {att_count} | رخص: {leave_count} | سوابق: {hist_count}')
     delete_user(uid)
-    log_action(session['user_id'], 'soft_delete_user', uid, f'حذف المستخدم: {u["full_name"] if u else uid}')
-    _auto_save(); flash('تم الحذف', 'success')
+    _auto_save()
+    flash(f'✅ تم حذف {u["full_name"]} وتسجيل {att_count + leave_count + hist_count} سجل مرتبط في سجل التدقيق.', 'success')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/users/<int:uid>/restore', methods=['POST'])
@@ -979,6 +1013,7 @@ def admin_restore():
     return render_template('admin/restore.html')
 
 init_db()
+create_indexes()
 init_settings()
 try: db_run("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''")
 except: pass
@@ -995,13 +1030,29 @@ except: pass
 try: db_run("UPDATE leaves SET is_active=1")
 except: pass
 ADMIN_PASS = os.getenv('ADMIN_PASSWORD', '1000')
+# Try to restore from any available backup source FIRST
+restore_ok = backup.do_restore()
 if not get_user('admn'):
     add_user('admn', ADMIN_PASS, 'القائد العام', 'admin')
     set_admin_phone('admn', os.getenv('ADMIN_PHONE', '0503077519'))
 
-backup.do_restore()
 backup.start_auto_backup()
 clear_old_audit()
+
+# ── Startup integrity check ──
+STARTUP_WARNING = ''
+try:
+    emp_count = db_get("SELECT COUNT(*) FROM users WHERE role='employee' AND (is_deleted IS NULL OR is_deleted=0)")[0][0]
+    admin_count = db_get("SELECT COUNT(*) FROM users WHERE role='admin'")[0][0]
+    if emp_count == 0 and admin_count > 0 and not restore_ok:
+        STARTUP_WARNING = '⚠️ لم يتم العثور على نسخة احتياطية! النظام يعمل بدون بيانات عسكريين.'
+        if os.getenv('RENDER') and not USE_PG:
+            STARTUP_WARNING += ' استخدم PostgreSQL (أضف DATABASE_URL) أو عيّن GH_TOKEN لحفظ البيانات.'
+        elif not backup.GH_TOKEN:
+            STARTUP_WARNING += ' عيّن المتغير GH_TOKEN لتفعيل النسخ الاحتياطي.'
+    elif not backup.GH_TOKEN and not USE_PG:
+        STARTUP_WARNING = '⚠️ لم يتم تعيين GH_TOKEN — البيانات لن تصمد عند إعادة النشر على Render. أضف PostgreSQL أو عيّن GH_TOKEN.'
+except: pass
 
 def _auto_save():
     threading.Thread(target=backup.do_backup, daemon=True).start()
@@ -1018,6 +1069,24 @@ def admin_force_backup():
     _auto_save()
     flash('تم حفظ نسخة احتياطية', 'success')
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/health')
+def health():
+    db_ok = False
+    try:
+        db_get("SELECT 1")
+        db_ok = True
+    except: pass
+    return jsonify({
+        'status': 'ok' if db_ok else 'degraded',
+        'db': db_ok,
+        'time': ksa_str(),
+        'version': '2.0'
+    })
+
+@ app.route('/offline')
+def offline():
+    return render_template('offline.html'), 200
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

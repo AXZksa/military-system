@@ -98,26 +98,45 @@ def do_backup():
         try:
             data = export_all()
             content = json.dumps(data, ensure_ascii=False, default=str)
+            ok = False
             if GH_TOKEN:
                 existing, sha = _fetch_api() or (None, None)
-                _push_api(content, sha)
+                ok = _push_api(content, sha)
             _push_local(content)
-        except: pass
+            return ok
+        except: return False
 
 def do_restore():
-    from database import db_get
+    from database import db_get, db_run
     with LOCK:
         try:
             users = db_get("SELECT COUNT(*) FROM users")
-            if users and users[0][0] > 5: return
+            if users and users[0][0] > 5: return True
         except: pass
     data = None
+    src = ''
     if GH_TOKEN:
         d, _ = _fetch_api() or (None, None)
-        data = d
-    if not data: data = _fetch_raw()
-    if not data: data = _fetch_local()
-    if data: import_all(data)
+        if d: data, src = d, 'github_api'
+    if not data:
+        d = _fetch_raw()
+        if d: data, src = d, 'github_raw'
+    if not data:
+        d = _fetch_local()
+        if d: data, src = d, 'local'
+    if data:
+        import_all(data)
+        return True
+    return False
+
+def get_backup_status():
+    return {
+        'has_token': bool(GH_TOKEN),
+        'github_ok': bool(GH_TOKEN),
+        'local_ok': os.path.exists(LOCAL) if os.path.exists(LOCAL) else False,
+        'local_path': LOCAL,
+        'raw_url': RAWBASE,
+    }
 
 _started = False
 def start_auto_backup():

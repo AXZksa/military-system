@@ -147,6 +147,19 @@ def validate_full_name(n):
 # ────────────────────────────────────────────────
 #  Init
 # ────────────────────────────────────────────────
+def create_indexes():
+    for q in [
+        "CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance(user_id, timestamp)",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(DATE(timestamp))",
+        "CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read)",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_user_active ON leaves(user_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS idx_sessions_user_active ON sessions(user_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_admin ON audit_log(admin_id)",
+        "CREATE INDEX IF NOT EXISTS idx_leave_requests_user ON leave_requests(user_id)",
+    ]:
+        try: db_run(q)
+        except: pass
+
 def init_db():
     if USE_PG:
         conn = _get_conn()

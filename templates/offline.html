@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}بدون اتصال{% endblock %}
+{% block full_content %}
+<div class="login-page">
+    <div class="login-card text-center">
+        <div class="login-emblem">
+            <i class="bi bi-wifi-off"></i>
+        </div>
+        <h2>لا يوجد اتصال بالإنترنت</h2>
+        <p class="subtitle">الرجاء التحقق من اتصال الشبكة والمحاولة مرة أخرى</p>
+        <button onclick="location.reload()" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-arrow-clockwise ms-1"></i> إعادة المحاولة
+        </button>
+    </div>
+</div>
+{% endblock %}
