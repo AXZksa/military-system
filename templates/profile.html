@@ -1,22 +1,19 @@
 {% extends "base.html" %}
 {% block title %}الملف الشخصي{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h4 class="fw-bold mb-0"><i class="bi bi-person-circle ms-2" style="color:var(--gov-gold);"></i>الملف الشخصي</h4>
-</div>
 <div class="row justify-content-center">
     <div class="col-lg-5">
         <div class="card">
-            <div class="card-header">الملف الشخصي</div>
+            <div class="card-header"><i class="bi bi-person-circle ms-2"></i>الملف الشخصي</div>
             <div class="card-body text-center">
                 <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         {% if user.avatar %}
-                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" style="width:110px;height:110px;object-fit:cover;border:2px solid var(--gov-gold);">
+                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;">
                         {% else %}
-                        <div id="avatarPlaceholder" style="width:110px;height:110px;background:var(--gov-green);display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--gov-gold);">
-                            <i class="bi bi-person fs-1" style="color:#fff;"></i>
+                        <div id="avatarPlaceholder" style="width:120px;height:120px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--accent-green);">
+                            <i class="bi bi-person fs-1" style="color:var(--accent-green);"></i>
                         </div>
                         {% endif %}
                     </div>
@@ -26,7 +23,7 @@
                         <label class="form-label w-100">اختر صورة</label>
                         <input type="file" name="avatar" accept="image/png,image/jpeg,image/gif,image/webp" class="form-control" onchange="previewAvatar(event)">
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 py-2" style="border-radius:0;"><i class="bi bi-upload ms-1"></i> رفع الصورة</button>
+                    <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-upload ms-1"></i> رفع الصورة</button>
                 </form>
             </div>
         </div>
@@ -41,7 +38,8 @@ function previewAvatar(e) {
         const img = document.getElementById('avatarPreview') || document.createElement('img');
         if (!img.id) {
             img.id = 'avatarPreview';
-            img.style.cssText = 'width:110px;height:110px;object-fit:cover;border:2px solid var(--gov-gold);';
+            img.className = 'rounded-circle border border-2';
+            img.style.cssText = 'width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;';
             const placeholder = document.getElementById('avatarPlaceholder');
             if (placeholder) placeholder.replaceWith(img);
             else document.querySelector('.mb-4').appendChild(img);

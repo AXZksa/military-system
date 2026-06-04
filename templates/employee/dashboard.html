@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}الرئيسية{% endblock %}
 {% block content %}
-<div class="page-header d-flex align-items-center gap-3">
-    <div class="avatar-lg" style="width:60px;height:60px;border-radius:0;">
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div class="avatar-lg" style="width:64px;height:64px;background:linear-gradient(135deg,var(--accent-green-dim),var(--accent-cyan-dim));border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--accent-green);flex-shrink:0;">
         {% if session.user_avatar %}
-        <img src="{{ session.user_avatar }}" style="width:56px;height:56px;object-fit:cover;">
+        <img src="{{ session.user_avatar }}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
         {% else %}
-        <i class="bi bi-person fs-2"></i>
+        <i class="bi bi-person fs-2" style="color:var(--accent-green);"></i>
         {% endif %}
     </div>
     <div>
@@ -15,14 +15,15 @@
     </div>
 </div>
 
-<div class="row g-2 mb-4">
+<div class="row g-3 mb-4">
     <div class="col-6">
         <div class="stat-card stat-card-green">
             <div class="card-body text-center py-3">
+                <i class="bi bi-check-circle fs-1 d-block mb-1" style="color:var(--accent-green);"></i>
                 <h6>حضور اليوم</h6>
-                <h2 style="font-size:1.5rem;">
+                <h2 style="font-size:1.6rem;">
                     {% if attendance and attendance|length > 0 %}
-                    <span style="color:var(--gov-green);">تم</span>
+                    <span class="text-success">تم</span>
                     {% else %}
                     <span class="text-muted">—</span>
                     {% endif %}
@@ -33,10 +34,11 @@
     <div class="col-6">
         <div class="stat-card stat-card-blue">
             <div class="card-body text-center py-3">
+                <i class="bi bi-airplane fs-1 d-block mb-1" style="color:var(--accent-blue);"></i>
                 <h6>الرخصة</h6>
-                <h2 style="font-size:1.5rem;">
+                <h2 style="font-size:1.6rem;">
                     {% if lv %}
-                    <span style="color:var(--gov-navy);">مرخوص</span>
+                    <span class="text-info">مرخوص</span>
                     {% else %}
                     <span class="text-muted">لا</span>
                     {% endif %}
@@ -46,17 +48,17 @@
     </div>
 </div>
 
-<div class="row g-2 mb-4">
+<div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-clock-history ms-2" style="color:var(--gov-gold);"></i>حركة اليوم</div>
+            <div class="card-header"><i class="bi bi-clock-history ms-2" style="color:var(--accent-cyan);"></i>حركة اليوم</div>
             <div class="card-body">
                 {% if attendance %}
                 <div class="timeline">
                     {% for act, ts in attendance %}
                     <div class="timeline-item">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-semibold">{% if act == 'check_in' %}<i class="bi bi-box-arrow-in-right ms-1" style="color:var(--gov-green);"></i>تسجيل دخول{% else %}<i class="bi bi-box-arrow-right ms-1" style="color:var(--gov-red);"></i>تسجيل خروج{% endif %}</span>
+                            <span class="fw-semibold">{% if act == 'check_in' %}<i class="bi bi-box-arrow-in-right text-success ms-1"></i>تسجيل دخول{% else %}<i class="bi bi-box-arrow-right text-danger ms-1"></i>تسجيل خروج{% endif %}</span>
                             <span class="text-muted small" dir="ltr">{{ ts[11:16] }}</span>
                         </div>
                     </div>
@@ -66,7 +68,7 @@
                 <div class="empty-state">
                     <i class="bi bi-clock"></i>
                     <p>لم يتم تسجيل حضور اليوم.</p>
-                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-primary mt-2">
+                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success rounded-pill mt-2 btn-glow">
                         <i class="bi bi-check-circle ms-1"></i> سجل الآن
                     </a>
                 </div>
@@ -77,20 +79,20 @@
     <div class="col-md-6">
         <div class="card h-100">
             {% if lv %}
-            <div class="card-header"><i class="bi bi-airplane ms-2" style="color:var(--gov-navy);"></i>الرخصة</div>
+            <div class="card-header" style="border-color:var(--accent-blue);"><i class="bi bi-airplane ms-2" style="color:var(--accent-blue);"></i>الرخصة</div>
             <div class="card-body text-center py-4">
-                <i class="bi bi-check-circle fs-1 mb-2 d-block" style="color:var(--gov-navy);"></i>
-                <h5 class="fw-bold" style="color:var(--gov-navy);">مرخوص</h5>
+                <i class="bi bi-check-circle text-info fs-1 mb-2 d-block"></i>
+                <h5 class="fw-bold text-info">🟢 مرخوص</h5>
                 <p class="text-muted small mb-0">{{ lv.label }}</p>
                 <p class="text-muted small">من: {{ lv.start[:16] }}</p>
                 <p class="text-muted small">إلى: {{ lv.end[:16] }}</p>
             </div>
             {% else %}
-            <div class="card-header"><i class="bi bi-airplane ms-2" style="color:var(--gov-gold);"></i>الرخصة</div>
+            <div class="card-header"><i class="bi bi-airplane ms-2" style="color:var(--accent-cyan);"></i>الرخصة</div>
             <div class="card-body text-center py-4">
                 <i class="bi bi-x-circle text-muted fs-1 mb-2 d-block"></i>
                 <p class="text-muted">غير مرخوص</p>
-                <a href="{{ url_for('employee_leave') }}" class="btn btn-primary px-4" style="border-radius:0;">
+                <a href="{{ url_for('employee_leave') }}" class="btn btn-primary rounded-pill px-4">
                     <i class="bi bi-plus-circle ms-1"></i> طلب رخصة
                 </a>
             </div>
@@ -99,13 +101,13 @@
     </div>
 </div>
 
-<div class="row g-2 mb-4">
+<div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-megaphone ms-2" style="color:var(--gov-gold);"></i>آخر تعميم</div>
+            <div class="card-header"><i class="bi bi-megaphone ms-2" style="color:var(--accent-gold);"></i>آخر تعميم</div>
             <div class="card-body">
                 {% if circular %}
-                <div style="background:var(--bg-tertiary);padding:14px;border:1px solid var(--border);">
+                <div style="background:var(--accent-gold-dim);border-radius:var(--radius);padding:16px;border:1px solid var(--border);">
                     <p class="mb-1 fw-semibold">{{ circular[0] }}</p>
                     <small class="text-muted">{{ circular[1] }}</small>
                 </div>
@@ -120,22 +122,22 @@
     </div>
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-link-45deg ms-2" style="color:var(--gov-gold);"></i>الوصول السريع</div>
+            <div class="card-header"><i class="bi bi-link-45deg ms-2" style="color:var(--accent-purple);"></i>الوصول السريع</div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success py-2 fw-bold" style="border-radius:0;">
+                    <a href="{{ url_for('employee_attendance') }}" class="btn btn-success rounded-pill py-2 fw-bold">
                         <i class="bi bi-check-circle ms-1"></i> تسجيل الحضور
                     </a>
-                    <a href="{{ url_for('employee_leave') }}" class="btn btn-primary py-2 fw-bold" style="border-radius:0;background:var(--gov-navy);">
+                    <a href="{{ url_for('employee_leave') }}" class="btn btn-info rounded-pill py-2 fw-bold text-white">
                         <i class="bi bi-airplane ms-1"></i> الرخص
                     </a>
-                    <a href="{{ url_for('employee_report') }}" class="btn py-2 fw-bold" style="border-radius:0;border:1px solid var(--gov-red);color:var(--gov-red);background:transparent;">
+                    <a href="{{ url_for('employee_report') }}" class="btn btn-outline-danger rounded-pill py-2">
                         <i class="bi bi-exclamation-circle ms-1"></i> بلاغ عاجل
                     </a>
-                    <a href="{{ url_for('employee_message_leader') }}" class="btn py-2 fw-bold" style="border-radius:0;border:1px solid var(--gov-gold);color:var(--gov-gold);background:transparent;">
+                    <a href="{{ url_for('employee_message_leader') }}" class="btn btn-outline-primary rounded-pill py-2">
                         <i class="bi bi-chat ms-1"></i> راسل القائد
                     </a>
-                    <a href="{{ url_for('employee_notifications') }}" class="btn py-2 fw-bold position-relative" style="border-radius:0;border:1px solid var(--border);color:var(--text-primary);background:transparent;">
+                    <a href="{{ url_for('employee_notifications') }}" class="btn btn-outline-warning rounded-pill py-2 position-relative">
                         <i class="bi bi-bell ms-1"></i> الإشعارات
                         {% if unread %}<span class="badge bg-danger ms-2">{{ unread }}</span>{% endif %}
                     </a>
