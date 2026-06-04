@@ -228,7 +228,7 @@
     </script>
     {% endif %}
     <script>
-    /* ── Live clock ── */
+    /* ── Live clock (server-synced) ── */
     (function() {
         function pad(n) { return n < 10 ? '0' + n : n; }
         var days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -236,9 +236,10 @@
         var ct = document.getElementById('clockTime');
         var cd = document.getElementById('clockDate');
         var sc = document.getElementById('sClockTime');
+        var serverBase = new Date('{{ now_iso }}');
+        var offset = serverBase.getTime() - Date.now();
         function tick() {
-            var d = new Date();
-            d.setHours(d.getHours() + 3);
+            var d = new Date(Date.now() + offset);
             var h = pad(d.getHours()), m = pad(d.getMinutes()), s = pad(d.getSeconds());
             var t = h + ':' + m + ':' + s;
             var dt = days[d.getDay()] + ' — ' + d.getDate() + ' ' + mons[d.getMonth()] + ' ' + d.getFullYear();

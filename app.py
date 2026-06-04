@@ -12,7 +12,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 app.permanent_session_lifetime = datetime.timedelta(hours=8)
-limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["30/minute"])
+limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["300/minute"])
 
 @app.after_request
 def add_security_headers(resp):
@@ -23,7 +23,7 @@ def add_security_headers(resp):
     resp.headers['Permissions-Policy'] = 'geolocation=(self), camera=(), microphone=()'
     if request.is_secure:
         resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    if resp.status_code == 200 and 'text/html' in resp.content_type:
+    if resp.status_code == 200 and 'text/html' in resp.content_type and request.path.startswith(('/admin/', '/employee/')):
         resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
     return resp
 
@@ -57,6 +57,7 @@ def inject_globals():
         'system_locked_global': locked,
         'startup_warning': sw,
         'now': ksa().strftime('%H:%M'),
+        'now_iso': ksa().isoformat(),
         'facility_lat': FACILITY_LOCATION[0],
         'facility_lng': FACILITY_LOCATION[1],
         'allowed_radius': ALLOWED_RADIUS,
@@ -280,16 +281,12 @@ def admin_dashboard():
 def admin_users():
     soldiers = get_soldiers()
     device_map = {}
-    impact_map = {}
-    for sid, _, _, _, _, _ in soldiers:
+    sids = [s[0] for s in soldiers]
+    for sid in sids:
         u = get_user_by_id(sid)
         if u and u.get('device_uid'):
             device_map[sid] = True
-        att = db_get("SELECT COUNT(*) FROM attendance WHERE user_id=?", (sid,))[0][0]
-        lv = db_get("SELECT COUNT(*) FROM leaves WHERE user_id=?", (sid,))[0][0]
-        hr = db_get("SELECT COUNT(*) FROM history_records WHERE user_id=?", (sid,))[0][0]
-        nr = db_get("SELECT COUNT(*) FROM notifications WHERE user_id=?", (sid,))[0][0]
-        impact_map[sid] = {'attendance': att, 'leaves': lv, 'history': hr, 'notifications': nr}
+    impact_map = get_users_impact(sids)
     return render_template('admin/users.html', soldiers=soldiers, user_device_map=device_map, impact_map=impact_map)
 
 @app.route('/admin/users/add', methods=['GET','POST'])
@@ -325,10 +322,7 @@ def admin_edit_user(uid):
         for fld, col in fields.items():
             val = request.form.get(fld, '').strip()
             if val and val != user.get(col):
-                if fld == 'username':
-                    update_user(uid, 'username', val)
-                else:
-                    db_run(f"UPDATE users SET {col}=? WHERE id=?", (val, uid))
+                update_user(uid, fld, val)
         pw = request.form.get('password', '').strip()
         if pw:
             update_user(uid, 'password', pw)
@@ -407,10 +401,10 @@ def admin_reset_device(uid):
     flash(f'تم إعادة تعيين الجهاز لـ {user["full_name"]}', 'success')
     return redirect(url_for('admin_users'))
 
-@app.route('/admin/users/search', methods=['POST'])
+@app.route('/admin/users/search', methods=['GET'])
 @admin_required
 def admin_search_user():
-    q = request.form.get('query', '').strip().lower()
+    q = request.args.get('q', '').strip().lower()
     user = get_user(q)
     if user and user['role'] == 'employee':
         lv = get_leave(user['id'])
@@ -860,9 +854,9 @@ def handle_attendance(action):
         if not data:
             log_attendance_error(user_id, 'بيانات JSON فارغة', None, None)
             return jsonify({'ok': False, 'msg': 'بيانات غير صالحة (تأكد من إرسال JSON صحيح)'}), 400
-        lat = data.get('latitude')
-        lng = data.get('longitude')
-        if lat is None or lng is None:
+    lat = data.get('latitude')
+    lng = data.get('longitude')
+    if lat is None or lng is None or (lat == 0 and lng == 0):
             log_attendance_error(user_id, 'إحداثيات GPS مفقودة', lat, lng)
             return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع (تأكد من تفعيل GPS)'}), 400
         try:
@@ -1078,8 +1072,26 @@ try:
         STARTUP_WARNING += ' — عيّن المتغير GH_TOKEN لتفعيل النسخ الاحتياطي التلقائي إلى GitHub.'
 except: pass
 
+_save_lock = threading.Lock()
+_SAVE_SCHEDULED = False
+
 def _auto_save():
-    threading.Thread(target=backup.do_backup, daemon=True).start()
+    global _SAVE_SCHEDULED
+    if _SAVE_SCHEDULED:
+        return
+    with _save_lock:
+        if _SAVE_SCHEDULED:
+            return
+        _SAVE_SCHEDULED = True
+    threading.Thread(target=_do_save, daemon=True).start()
+
+def _do_save():
+    global _SAVE_SCHEDULED
+    try:
+        time.sleep(2)
+        backup.do_backup()
+    finally:
+        _SAVE_SCHEDULED = False
 
 @app.route('/admin/audit-log')
 @admin_required

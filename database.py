@@ -17,32 +17,33 @@ if USE_PG:
     import psycopg2
     import psycopg2.pool
 
-    def _get_conn():
+    from contextlib import contextmanager
+
+    def _ensure_pool():
         global _pool
         if _pool is None:
             with _pool_lock:
                 if _pool is None:
                     _pool = psycopg2.pool.ThreadedConnectionPool(1, 10, DATABASE_URL, sslmode='require')
-        return _pool.getconn()
 
-    def _put_conn(conn):
-        global _pool
-        if _pool and conn:
+    @contextmanager
+    def _get_conn():
+        _ensure_pool()
+        conn = _pool.getconn()
+        try:
+            yield conn
+        finally:
             _pool.putconn(conn)
 
     def db_get(q, p=()):
         q = q.replace('?', '%s')
         for attempt in range(MAX_RETRIES):
-            conn = None
             try:
-                conn = _get_conn()
-                c = conn.cursor()
-                c.execute(q, p)
-                rows = c.fetchall()
-                _put_conn(conn)
-                return rows
+                with _get_conn() as conn:
+                    c = conn.cursor()
+                    c.execute(q, p)
+                    return c.fetchall()
             except Exception as e:
-                if conn: _put_conn(conn)
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY * (attempt + 1))
                     continue
@@ -52,17 +53,13 @@ if USE_PG:
     def db_run(q, p=()):
         q = q.replace('?', '%s')
         for attempt in range(MAX_RETRIES):
-            conn = None
             try:
-                conn = _get_conn()
-                c = conn.cursor()
-                c.execute(q, p)
-                conn.commit()
-                n = c.rowcount
-                _put_conn(conn)
-                return n
+                with _get_conn() as conn:
+                    c = conn.cursor()
+                    c.execute(q, p)
+                    conn.commit()
+                    return c.rowcount
             except Exception as e:
-                if conn: _put_conn(conn)
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY * (attempt + 1))
                     continue
@@ -71,17 +68,15 @@ if USE_PG:
 
     def transaction(func):
         def wrapper(*args, **kwargs):
-            conn = _get_conn()
-            try:
-                c = conn.cursor()
-                result = func(c, *args, **kwargs)
-                conn.commit()
-                _put_conn(conn)
-                return result
-            except Exception as e:
-                conn.rollback()
-                _put_conn(conn)
-                raise e
+            with _get_conn() as conn:
+                try:
+                    c = conn.cursor()
+                    result = func(c, *args, **kwargs)
+                    conn.commit()
+                    return result
+                except Exception as e:
+                    conn.rollback()
+                    raise e
         return wrapper
 
 else:
@@ -162,24 +157,24 @@ def create_indexes():
 
 def init_db():
     if USE_PG:
-        conn = _get_conn()
-        c = conn.cursor()
-        c.execute("""CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL,full_name TEXT NOT NULL,role TEXT DEFAULT 'employee',chat_id BIGINT,device_uid TEXT,is_blocked INTEGER DEFAULT 0,phone_number TEXT DEFAULT NULL,rank_title TEXT DEFAULT '',is_deleted INTEGER DEFAULT 0,avatar TEXT DEFAULT '',created_at TEXT DEFAULT '',updated_at TEXT DEFAULT '')""")
-        c.execute("""CREATE TABLE IF NOT EXISTS attendance (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,action TEXT NOT NULL,latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,timestamp TEXT NOT NULL,note TEXT DEFAULT '')""")
-        c.execute("""CREATE TABLE IF NOT EXISTS leaves (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,start_time TEXT,end_time TEXT,duration_label TEXT,is_active INTEGER DEFAULT 1)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS leave_requests (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,duration_label TEXT,hours_duration INTEGER,request_date TEXT,status TEXT DEFAULT 'PENDING')""")
-        c.execute("""CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,content TEXT NOT NULL,is_read INTEGER DEFAULT 0,created_at TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS shifts (id SERIAL PRIMARY KEY,shift_date TEXT NOT NULL,current_duty TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS urgent_reports (id SERIAL PRIMARY KEY,sender_id INTEGER NOT NULL,report_text TEXT NOT NULL,reply_text TEXT,created_at TEXT NOT NULL,status TEXT DEFAULT 'OPEN')""")
-        c.execute("""CREATE TABLE IF NOT EXISTS circulars (id SERIAL PRIMARY KEY,content TEXT NOT NULL,created_at TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS history_records (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,note TEXT NOT NULL,created_at TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS security_alerts (id SERIAL PRIMARY KEY,user_id INTEGER,alert_type TEXT NOT NULL,detail TEXT,created_at TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS shifts_archive (id SERIAL PRIMARY KEY,shift_date TEXT,current_duty TEXT,username TEXT DEFAULT '',created_at TEXT)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY,value TEXT NOT NULL DEFAULT '')""")
-        c.execute("""CREATE TABLE IF NOT EXISTS audit_log (id SERIAL PRIMARY KEY,admin_id INTEGER NOT NULL,action TEXT NOT NULL,target_id INTEGER,details TEXT,created_at TEXT NOT NULL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS sessions (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,session_id TEXT UNIQUE NOT NULL,ip_address TEXT DEFAULT '',user_agent TEXT DEFAULT '',browser TEXT DEFAULT '',os TEXT DEFAULT '',device_type TEXT DEFAULT '',created_at TEXT NOT NULL,last_activity TEXT NOT NULL,is_active INTEGER DEFAULT 1)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS attendance_errors (id SERIAL PRIMARY KEY,user_id INTEGER,error TEXT NOT NULL,latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,created_at TEXT NOT NULL)""")
-        conn.commit(); _put_conn(conn)
+        with _get_conn() as conn:
+            c = conn.cursor()
+            c.execute("""CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL,full_name TEXT NOT NULL,role TEXT DEFAULT 'employee',chat_id BIGINT,device_uid TEXT,is_blocked INTEGER DEFAULT 0,phone_number TEXT DEFAULT NULL,rank_title TEXT DEFAULT '',is_deleted INTEGER DEFAULT 0,avatar TEXT DEFAULT '',created_at TEXT DEFAULT '',updated_at TEXT DEFAULT '')""")
+            c.execute("""CREATE TABLE IF NOT EXISTS attendance (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,action TEXT NOT NULL,latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,timestamp TEXT NOT NULL,note TEXT DEFAULT '')""")
+            c.execute("""CREATE TABLE IF NOT EXISTS leaves (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,start_time TEXT,end_time TEXT,duration_label TEXT,is_active INTEGER DEFAULT 1)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS leave_requests (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,duration_label TEXT,hours_duration INTEGER,request_date TEXT,status TEXT DEFAULT 'PENDING')""")
+            c.execute("""CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,content TEXT NOT NULL,is_read INTEGER DEFAULT 0,created_at TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS shifts (id SERIAL PRIMARY KEY,shift_date TEXT NOT NULL,current_duty TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS urgent_reports (id SERIAL PRIMARY KEY,sender_id INTEGER NOT NULL,report_text TEXT NOT NULL,reply_text TEXT,created_at TEXT NOT NULL,status TEXT DEFAULT 'OPEN')""")
+            c.execute("""CREATE TABLE IF NOT EXISTS circulars (id SERIAL PRIMARY KEY,content TEXT NOT NULL,created_at TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS history_records (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,note TEXT NOT NULL,created_at TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS security_alerts (id SERIAL PRIMARY KEY,user_id INTEGER,alert_type TEXT NOT NULL,detail TEXT,created_at TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS shifts_archive (id SERIAL PRIMARY KEY,shift_date TEXT,current_duty TEXT,username TEXT DEFAULT '',created_at TEXT)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY,value TEXT NOT NULL DEFAULT '')""")
+            c.execute("""CREATE TABLE IF NOT EXISTS audit_log (id SERIAL PRIMARY KEY,admin_id INTEGER NOT NULL,action TEXT NOT NULL,target_id INTEGER,details TEXT,created_at TEXT NOT NULL)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS sessions (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL,session_id TEXT UNIQUE NOT NULL,ip_address TEXT DEFAULT '',user_agent TEXT DEFAULT '',browser TEXT DEFAULT '',os TEXT DEFAULT '',device_type TEXT DEFAULT '',created_at TEXT NOT NULL,last_activity TEXT NOT NULL,is_active INTEGER DEFAULT 1)""")
+            c.execute("""CREATE TABLE IF NOT EXISTS attendance_errors (id SERIAL PRIMARY KEY,user_id INTEGER,error TEXT NOT NULL,latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,created_at TEXT NOT NULL)""")
+            conn.commit()
     else:
         conn = _get_sqlite()
         c = conn.cursor()
@@ -254,6 +249,20 @@ def get_deleted_soldiers():
     rows = db_get("SELECT id,full_name,username,is_blocked,rank_title,phone_number FROM users WHERE role='employee' AND is_deleted=1")
     return sorted(rows, key=lambda x: (-rank_index(x[4]), x[1]))
 
+def get_users_impact(user_ids):
+    if not user_ids: return {}
+    ph = ','.join(['?' for _ in user_ids])
+    result = {uid: {'attendance':0,'leaves':0,'history':0,'notifications':0} for uid in user_ids}
+    for uid, cnt in db_get(f"SELECT user_id, COUNT(*) FROM attendance WHERE user_id IN ({ph}) GROUP BY user_id", user_ids):
+        if uid in result: result[uid]['attendance'] = cnt
+    for uid, cnt in db_get(f"SELECT user_id, COUNT(*) FROM leaves WHERE user_id IN ({ph}) GROUP BY user_id", user_ids):
+        if uid in result: result[uid]['leaves'] = cnt
+    for uid, cnt in db_get(f"SELECT user_id, COUNT(*) FROM history_records WHERE user_id IN ({ph}) GROUP BY user_id", user_ids):
+        if uid in result: result[uid]['history'] = cnt
+    for uid, cnt in db_get(f"SELECT user_id, COUNT(*) FROM notifications WHERE user_id IN ({ph}) GROUP BY user_id", user_ids):
+        if uid in result: result[uid]['notifications'] = cnt
+    return result
+
 def add_user(u, p, n, role='employee', rank='', phone=''):
     ok, uname = validate_username(u)
     if not ok: return False, uname
@@ -274,25 +283,25 @@ def add_user(u, p, n, role='employee', rank='', phone=''):
         return False, f"خطأ في الحفظ: {str(e)[:80]}"
 
 ALLOWED_USER_FIELDS = {'username','password','full_name','rank_title','phone_number'}
+_FIELD_COL_MAP = {'username':'username','password':'password','full_name':'full_name','rank_title':'rank_title','phone_number':'phone_number'}
 
 def update_user(uid, field, value):
     if field not in ALLOWED_USER_FIELDS: return False
+    col = _FIELD_COL_MAP[field]
     if field == 'password':
         if not validate_password(value)[0]: return False
         value = hash_password(value)
     elif field == 'username':
         ok, msg = validate_username(value)
         if not ok: return False
-        try:
-            db_run("UPDATE users SET username=?,updated_at=? WHERE id=?", (msg, ksa_str(), uid))
-            return True
-        except: return False
+        db_run(f"UPDATE users SET username=?,updated_at=? WHERE id=?", (msg, ksa_str(), uid))
+        return True
     elif field == 'full_name':
         ok, msg = validate_full_name(value)
         if not ok: return False
         value = msg
     v = value.strip() if isinstance(value, str) else value
-    db_run(f"UPDATE users SET {field}=?,updated_at=? WHERE id=?", (v, ksa_str(), uid))
+    db_run(f"UPDATE users SET {col}=?,updated_at=? WHERE id=?", (v, ksa_str(), uid))
     return True
 
 def set_admin_phone(username, phone):
@@ -617,7 +626,7 @@ def log_action(admin_id, action, target_id=None, details=''):
            (admin_id, action, target_id, details, ksa_str()))
 
 def get_audit_log(limit=50):
-    return db_get("SELECT al.id,u.full_name,al.action,al.target_id,al.details,al.created_at FROM audit_log al JOIN users u ON al.admin_id=u.id ORDER BY al.id DESC LIMIT ?", (limit,))
+    return db_get("SELECT al.id,COALESCE(u.full_name,'[محذوف]'),al.action,al.target_id,al.details,al.created_at FROM audit_log al LEFT JOIN users u ON al.admin_id=u.id ORDER BY al.id DESC LIMIT ?", (limit,))
 
 def clear_old_audit():
     db_run("DELETE FROM audit_log WHERE created_at < ?", ((ksa() - datetime.timedelta(days=90)).strftime('%Y-%m-%d %H:%M:%S'),))

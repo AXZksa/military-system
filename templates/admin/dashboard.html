@@ -3,7 +3,7 @@
 {% block title %}لوحة التحكم{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2" style="color:var(--accent-green);"></i>لوحة التحكم</h4>
+    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2" style="color:var(--accent-blue);"></i>لوحة التحكم</h4>
     <div class="d-flex gap-2">
         <form method="POST" action="{{ url_for('admin_force_backup') }}" class="d-inline">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
@@ -105,7 +105,7 @@
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-pie-chart ms-2" style="color:var(--accent-green);"></i>نسبة الحضور والغياب
+                <i class="bi bi-pie-chart ms-2" style="color:var(--accent-blue);"></i>نسبة الحضور والغياب
             </div>
             <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
                 <canvas id="attendanceChart" width="240" height="240" style="max-width:260px;max-height:260px;"></canvas>
@@ -115,7 +115,7 @@
     <div class="col-lg-7">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-file-text ms-2" style="color:var(--accent-green);"></i>تقرير اليوم — الحضور والانصراف</span>
+                <span><i class="bi bi-file-text ms-2" style="color:var(--accent-blue);"></i>تقرير اليوم — الحضور والانصراف</span>
                 <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
             </div>
             <div class="card-body p-0">
@@ -148,7 +148,7 @@
         return;
     }
     var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    new Chart(ctx, {
+    var chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['حاضر', 'غائب', 'إجازة', 'بدون خروج'],
@@ -185,12 +185,10 @@
     });
     var obs = new MutationObserver(function() {
         var d = document.documentElement.getAttribute('data-theme') !== 'light';
-        Chart.instances.forEach(function(chart) {
-            if (chart.options.plugins && chart.options.plugins.legend) {
-                chart.options.plugins.legend.labels.color = d ? '#e2e8f0' : '#0f172a';
-                chart.update();
-            }
-        });
+        if (chart && chart.options && chart.options.plugins && chart.options.plugins.legend) {
+            chart.options.plugins.legend.labels.color = d ? '#e2e8f0' : '#0f172a';
+            chart.update();
+        }
     });
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();
