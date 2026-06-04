@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}تسجيل الدخول{% endblock %}
+{% block title %}تسجيل الدخول — المنظومة الحكومية{% endblock %}
 {% block full_content %}
 <div class="login-page">
     <div class="login-card">
@@ -7,13 +7,13 @@
             <i class="bi bi-shield-fill-check"></i>
         </div>
         <div class="text-center">
-            <h2>منظومة توثيق الحركة الميدانية</h2>
+            <h2>نظام توثيق الحركة</h2>
             <p class="subtitle">القيادة العامة — دخول موحّد</p>
         </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'danger' }} d-flex align-items-center gap-2 py-2">
+        <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'danger' }} d-flex align-items-center gap-2 py-2" style="border-radius:0;">
             <i class="bi bi-exclamation-circle"></i> {{ message }}
         </div>
         {% endfor %}
@@ -39,7 +39,7 @@
             </button>
         </form>
         <div class="login-footer-text">
-            ⚠️ هذه المنظومة مسجلة ومراقبة — جميع العمليات موثّقة
+            هذه المنظومة مسجلة ومراقبة — جميع العمليات موثّقة
         </div>
     </div>
 </div>

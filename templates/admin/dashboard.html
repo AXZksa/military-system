@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% from "macros/report_macros.html" import report_row %}
-{% block title %}لوحة التحكم{% endblock %}
+{% block title %}لوحة التحكم — المنظومة الحكومية{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2" style="color:var(--accent-blue);"></i>لوحة التحكم</h4>
-    <div class="d-flex gap-2">
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center">
+    <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 ms-2" style="color:var(--gov-gold);"></i>لوحة التحكم</h4>
+    <div class="d-flex gap-2 mt-2 mt-md-0">
         <form method="POST" action="{{ url_for('admin_force_backup') }}" class="d-inline">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" title="نسخ احتياطي">
+            <button class="btn btn-sm btn-outline-primary px-3" title="نسخ احتياطي">
                 <i class="bi bi-cloud-arrow-up"></i>
             </button>
         </form>
         <form method="POST" action="{{ url_for('admin_system_lock') }}" class="d-inline">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-            <button class="btn btn-sm px-3 rounded-pill fw-bold {% if system_locked %}btn-success{% else %}btn-danger{% endif %}" title="{% if system_locked %}فتح النظام{% else %}قفل النظام{% endif %}">
+            <button class="btn btn-sm px-3 fw-bold {% if system_locked %}btn-success{% else %}btn-danger{% endif %}" title="{% if system_locked %}فتح النظام{% else %}قفل النظام{% endif %}" style="border-radius:0;">
                 <i class="bi {% if system_locked %}bi-unlock{% else %}bi-lock-fill{% endif %} ms-1"></i>
                 {% if system_locked %}مفتوح{% else %}مقفل{% endif %}
             </button>
@@ -21,7 +21,7 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-4">
     <div class="col-6 col-lg-3">
         <div class="stat-card stat-card-navy">
             <div class="card-body">
@@ -60,7 +60,7 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-4">
     <div class="col-6 col-lg-3">
         <div class="stat-card stat-card-amber">
             <div class="card-body">
@@ -90,7 +90,7 @@
     </div>
     <div class="col-6 col-lg-3">
         <a href="{{ url_for('admin_reports') }}" class="text-decoration-none">
-            <div class="stat-card stat-card-blue">
+            <div class="stat-card stat-card-navy">
                 <div class="card-body">
                     <i class="bi bi-file-text stat-icon"></i>
                     <h6>التقرير المفصل</h6>
@@ -101,27 +101,27 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-2 mb-4">
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-pie-chart ms-2" style="color:var(--accent-blue);"></i>نسبة الحضور والغياب
+                <i class="bi bi-pie-chart ms-2" style="color:var(--gov-gold);"></i>نسبة الحضور والغياب
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:300px;">
-                <canvas id="attendanceChart" width="240" height="240" style="max-width:260px;max-height:260px;"></canvas>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:280px;">
+                <canvas id="attendanceChart" width="220" height="220" style="max-width:240px;max-height:240px;"></canvas>
             </div>
         </div>
     </div>
     <div class="col-lg-7">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-file-text ms-2" style="color:var(--accent-blue);"></i>تقرير اليوم — الحضور والانصراف</span>
-                <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary rounded-pill px-3">عرض الكل</a>
+                <span><i class="bi bi-file-text ms-2" style="color:var(--gov-gold);"></i>تقرير اليوم — الحضور والانصراف</span>
+                <a href="{{ url_for('admin_reports') }}" class="btn btn-sm btn-primary px-3" style="border-radius:0;">عرض الكل</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height:340px;overflow-y:auto;">
                     <table class="table table-hover mb-0">
-                        <thead class="table-dark">
+                        <thead>
                             <tr><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th></tr>
                         </thead>
                         <tbody>{% for r in rpt.rows %}{{ report_row(r) }}{% endfor %}</tbody>
@@ -154,22 +154,22 @@
             labels: ['حاضر', 'غائب', 'إجازة', 'بدون خروج'],
             datasets: [{
                 data: [present, absent, onLeave, noOut],
-                backgroundColor: ['#22c55e', '#ef4444', '#3b82f6', '#f97316'],
+                backgroundColor: ['var(--gov-green)', 'var(--gov-red)', 'var(--gov-navy)', 'var(--gov-amber)'],
                 borderWidth: 0,
-                hoverOffset: 8
+                hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            cutout: '70%',
+            cutout: '68%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        color: isDark ? '#e2e8f0' : '#0f172a',
-                        font: { family: 'Tajawal', size: 12 },
-                        padding: 16,
+                        color: isDark ? '#f0ede8' : '#1a1a1a',
+                        font: { family: 'Tajawal', size: 11 },
+                        padding: 14,
                         usePointStyle: true,
                         pointStyleWidth: 10
                     }
@@ -186,7 +186,7 @@
     var obs = new MutationObserver(function() {
         var d = document.documentElement.getAttribute('data-theme') !== 'light';
         if (chart && chart.options && chart.options.plugins && chart.options.plugins.legend) {
-            chart.options.plugins.legend.labels.color = d ? '#e2e8f0' : '#0f172a';
+            chart.options.plugins.legend.labels.color = d ? '#f0ede8' : '#1a1a1a';
             chart.update();
         }
     });

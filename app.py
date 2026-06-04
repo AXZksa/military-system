@@ -854,9 +854,9 @@ def handle_attendance(action):
         if not data:
             log_attendance_error(user_id, 'بيانات JSON فارغة', None, None)
             return jsonify({'ok': False, 'msg': 'بيانات غير صالحة (تأكد من إرسال JSON صحيح)'}), 400
-    lat = data.get('latitude')
-    lng = data.get('longitude')
-    if lat is None or lng is None or (lat == 0 and lng == 0):
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+        if lat is None or lng is None or (lat == 0 and lng == 0):
             log_attendance_error(user_id, 'إحداثيات GPS مفقودة', lat, lng)
             return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع (تأكد من تفعيل GPS)'}), 400
         try:

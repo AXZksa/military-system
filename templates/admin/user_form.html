@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{% if user %}تعديل{% else %}إضافة{% endif %} عسكري{% endblock %}
 {% block content %}
+<div class="page-header">
+    <h4 class="fw-bold mb-0">{% if user %}<i class="bi bi-pencil ms-2" style="color:var(--gov-gold);"></i>تعديل بيانات{% else %}<i class="bi bi-person-plus ms-2" style="color:var(--gov-gold);"></i>إضافة عسكري جديد{% endif %}</h4>
+</div>
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
-        <div class="card">
-            <div class="card-header">
+        <div class="card" style="border-radius:0;">
+            <div class="card-header" style="border-radius:0;">
                 <span>{% if user %}<i class="bi bi-pencil ms-2"></i>تعديل بيانات{% else %}<i class="bi bi-person-plus ms-2"></i>إضافة عسكري جديد{% endif %}</span>
             </div>
             <div class="card-body">
@@ -35,7 +38,7 @@
                         <label class="form-label">رقم الجوال</label>
                         <input type="text" name="phone_number" class="form-control" dir="ltr" value="{{ user.phone_number if user and user.phone_number else '' }}">
                     </div>
-                    <button type="submit" class="btn btn-primary">{% if user %}<i class="bi bi-check-lg ms-1"></i> حفظ التعديلات{% else %}<i class="bi bi-plus-lg ms-1"></i> إضافة{% endif %}</button>
+                    <button type="submit" class="btn btn-primary" style="border-radius:0;">{% if user %}<i class="bi bi-check-lg ms-1"></i> حفظ التعديلات{% else %}<i class="bi bi-plus-lg ms-1"></i> إضافة{% endif %}</button>
                 </form>
             </div>
         </div>

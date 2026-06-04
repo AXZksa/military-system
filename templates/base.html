@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" style="background:#080c12;">
+<html lang="ar" dir="rtl" data-theme="dark" style="background:#0a1a12;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#080c12">
+    <meta name="theme-color" content="#004d26">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -19,7 +19,7 @@
 <body>
     <div class="page-loader" id="pageLoader">
         <div class="loader-ring"></div>
-        <small class="text-muted">جاري التحميل...</small>
+        <small style="color:var(--text-muted);font-size:13px;">المنظومة الحكومية — جاري التحميل...</small>
     </div>
     <div id="nprogress-bar"></div>
     <script>window.addEventListener('load',function(){var l=document.getElementById('pageLoader');if(l)setTimeout(function(){l.classList.add('hidden')},200);});</script>
@@ -38,11 +38,11 @@
                     <span class="clock-time" id="clockTime">00:00</span>
                     <span class="clock-date" id="clockDate">---</span>
                 </div>
-                <span class="text-secondary small d-none d-md-inline fw-semibold">{{ session.full_name }}</span>
+                <span class="text-white-50 small d-none d-md-inline fw-semibold">{{ session.full_name }}</span>
                 <button class="btn-icon" id="themeToggle" title="تبديل السمة">
                     <i class="bi bi-moon-stars"></i>
                 </button>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-primary btn-sm px-3" onclick="return confirm('تسجيل خروج؟')">
+                <a href="{{ url_for('logout') }}" class="btn btn-sm text-white border border-white border-opacity-25 px-3" style="border-radius:0;background:rgba(255,255,255,.05);" onclick="return confirm('تسجيل خروج؟')">
                     <i class="bi bi-box-arrow-left"></i>
                 </a>
             </div>
@@ -51,7 +51,7 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h5><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
+            <h5><i class="bi bi-shield-fill-check ms-1" style="color:var(--gov-gold);"></i> القائمة الرئيسية</h5>
             <button type="button" class="btn-close" id="sidebarClose"></button>
         </div>
         <div class="sidebar-body">
@@ -66,18 +66,10 @@
                 <h6><a href="{{ url_for('profile') }}" class="text-decoration-none text-reset">{{ session.full_name }}</a></h6>
                 <small>{{ 'قائد المنظومة' if session.role == 'admin' else 'عسكري' }}</small>
                 <div class="mt-2">
-                    <div class="live-clock justify-content-center" id="sidebarClock">
-                        <span class="clock-time" id="sClockTime">00:00</span>
+                    <div class="live-clock justify-content-center" id="sidebarClock" style="border:none;padding:0;">
+                        <span class="clock-time" id="sClockTime" style="color:var(--gov-gold);font-size:14px;">00:00</span>
                     </div>
                 </div>
-                {% if session.role == 'admin' %}
-                <form method="POST" action="{{ url_for('admin_reset_self_device') }}" class="mt-2" onsubmit="return confirm('إعادة تعيين أجهزتك المسجلة؟')">
-                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button class="btn btn-sm btn-outline-warning rounded-pill w-100">
-                        <i class="bi bi-phone"></i> إعادة تعيين الأجهزة
-                    </button>
-                </form>
-                {% endif %}
             </div>
             <ul class="nav flex-column mt-2 px-2">
                 {% if session.role == 'admin' %}
@@ -187,7 +179,7 @@
             </ul>
         </div>
         <div class="sidebar-footer">
-            <small class="text-muted d-block text-center" style="font-size:10px;">حقوق الموقع — قسم المعلومات</small>
+            <small class="text-muted d-block text-center" style="font-size:9px;">© القيادة العامة — جميع الحقوق محفوظة</small>
         </div>
     </div>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -204,7 +196,7 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm">
+            <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show d-flex align-items-center gap-2">
                 <i class="bi {% if category=='success' %}bi-check-circle{% elif category=='danger' %}bi-x-circle{% elif category=='warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

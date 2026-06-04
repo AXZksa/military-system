@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block title %}إدارة العساكر{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0"><i class="bi bi-people ms-2"></i>إدارة العساكر</h4>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('admin_add_user') }}" class="btn btn-success rounded-pill px-3"><i class="bi bi-plus-lg"></i> إضافة</a>
-        <a href="{{ url_for('admin_deleted_users') }}" class="btn btn-outline-warning rounded-pill px-3"><i class="bi bi-archive"></i> المحذوفون</a>
-        <button class="btn btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i> استعلام</button>
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h4 class="fw-bold mb-0"><i class="bi bi-people ms-2" style="color:var(--gov-gold);"></i>إدارة العساكر</h4>
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+        <a href="{{ url_for('admin_add_user') }}" class="btn btn-success px-3" style="border-radius:0;"><i class="bi bi-plus-lg"></i> إضافة</a>
+        <a href="{{ url_for('admin_deleted_users') }}" class="btn px-3" style="border-radius:0;border:1px solid var(--gov-amber);color:var(--gov-amber);background:transparent;"><i class="bi bi-archive"></i> المحذوفون</a>
+        <button class="btn px-3" style="border-radius:0;border:1px solid var(--gov-gold);color:var(--gov-gold);background:transparent;" data-bs-toggle="modal" data-bs-target="#searchModal"><i class="bi bi-search"></i> استعلام</button>
     </div>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <span><i class="bi bi-list-ul ms-2"></i>بيان القوة — <span class="badge bg-primary rounded-pill">{{ soldiers|length }}</span></span>
+        <span><i class="bi bi-list-ul ms-2"></i>بيان القوة — <span class="badge" style="background:var(--gov-gold);color:#1a1a1a;">{{ soldiers|length }}</span></span>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
-                <thead class="table-dark">
+                <thead>
                     <tr><th>#</th><th>الرتبة</th><th>الاسم</th><th>اليوزر</th><th>رقم الجوال</th><th>الحالة</th><th>الجهاز</th><th></th></tr>
                 </thead>
                 <tbody>
@@ -29,28 +29,28 @@
                         <td><code dir="ltr">{{ un }}</code></td>
                         <td dir="ltr" class="text-muted small">{{ phone or '—' }}</td>
                         <td>
-                            {% if blk %}<span class="badge bg-danger bg-opacity-75 rounded-pill px-3">موقوف</span>
-                            {% else %}<span class="badge bg-success rounded-pill px-3">نشط</span>{% endif %}
+                            {% if blk %}<span class="badge" style="background:var(--gov-red);">موقوف</span>
+                            {% else %}<span class="badge" style="background:var(--gov-green);">نشط</span>{% endif %}
                         </td>
                         <td>
-                            <span class="badge rounded-pill {% if user_device_map and user_device_map.get(sid) %}bg-info{% else %}bg-secondary{% endif %}">
+                            <span class="badge" style="{% if user_device_map and user_device_map.get(sid) %}background:var(--gov-navy);color:#fff;{% else %}background:var(--border);color:var(--text-muted);{% endif %}">
                                 {% if user_device_map and user_device_map.get(sid) %}مرتبط{% else %}غير مرتبط{% endif %}
                             </span>
                         </td>
                         <td class="text-nowrap">
-                            <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm btn-warning rounded-pill" title="تعديل"><i class="bi bi-pencil"></i></a>
+                            <a href="{{ url_for('admin_edit_user', uid=sid) }}" class="btn btn-sm" style="border-radius:0;background:var(--gov-amber);color:#fff;" title="تعديل"><i class="bi bi-pencil"></i></a>
                             <form method="POST" action="{{ url_for('admin_toggle_block', uid=sid) }}" class="d-inline">
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm rounded-pill {% if blk %}btn-success{% else %}btn-secondary{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
+                                <button class="btn btn-sm" style="border-radius:0;background:{% if blk %}#fff;color:var(--gov-green);border:1px solid var(--gov-green);{% else %}var(--gov-red);color:#fff;{% endif %}" title="{% if blk %}تفعيل{% else %}إيقاف{% endif %}">
                                     <i class="bi {% if blk %}bi-unlock{% else %}bi-lock{% endif %}"></i>
                                 </button>
                             </form>
                             <form method="POST" action="{{ url_for('admin_reset_device', uid=sid) }}" class="d-inline">
                                 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                                <button class="btn btn-sm btn-outline-info rounded-pill" title="إعادة تعيين الجهاز"><i class="bi bi-phone"></i></button>
+                                <button class="btn btn-sm" style="border-radius:0;background:var(--gov-navy);color:#fff;" title="إعادة تعيين الجهاز"><i class="bi bi-phone"></i></button>
                             </form>
                             {% set imp = impact_map.get(sid, {'attendance':0,'leaves':0,'history':0,'notifications':0}) %}
-                            <button class="btn btn-sm btn-danger rounded-pill" onclick="showDeleteModal({{ sid }}, '{{ un }}', '{{ nm }}', {{ imp.attendance }}, {{ imp.leaves }}, {{ imp.history }}, {{ imp.notifications }})" title="حذف"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-sm" style="border-radius:0;background:var(--gov-red);color:#fff;" onclick="showDeleteModal({{ sid }}, '{{ un }}', '{{ nm }}', {{ imp.attendance }}, {{ imp.leaves }}, {{ imp.history }}, {{ imp.notifications }})" title="حذف"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -62,20 +62,20 @@
 
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content" style="border-radius:0;">
             <div class="modal-header border-0">
-                <h5 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle ms-2"></i>تأكيد حذف العسكري</h5>
+                <h5 class="fw-bold" style="color:var(--gov-red);"><i class="bi bi-exclamation-triangle ms-2"></i>تأكيد حذف العسكري</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" id="deleteForm">
                 <div class="modal-body">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <div class="alert alert-danger py-3">
+                    <div class="alert alert-danger py-3" style="border-radius:0;">
                         <i class="bi bi-shield-exclamation fs-4 d-block mb-2 text-center"></i>
                         <p class="mb-1 fw-bold text-center" id="deleteWarning">🔴 حذف العسكري وجميع سجلاته</p>
                         <p class="mb-0 small text-center">العملية غير قابلة للتراجع المباشر. يمكن الاستعادة من المحذوفون.</p>
                     </div>
-                    <div class="card bg-light mb-3">
+                    <div class="card bg-light mb-3" style="border-radius:0;">
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between">
                                 <span>العسكري:</span>
@@ -110,8 +110,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-danger rounded-pill px-4" id="deleteConfirmBtn" disabled>
+                    <button type="button" class="btn btn-secondary px-3" style="border-radius:0;" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger px-4" id="deleteConfirmBtn" disabled style="border-radius:0;">
                         <i class="bi bi-trash ms-1"></i> تأكيد الحذف
                     </button>
                 </div>
@@ -149,13 +149,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="modal fade" id="searchModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <form method="GET" action="{{ url_for('admin_search_user') }}">
-            <div class="modal-content">
+            <div class="modal-content" style="border-radius:0;">
                 <div class="modal-header border-0"><h5 class="fw-bold"><i class="bi bi-search ms-2"></i>استعلام عن عسكري</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <input type="text" name="q" class="form-control form-control-lg" placeholder="أدخل اليوزر..." required autofocus>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-search ms-1"></i> بحث</button>
+                    <button type="submit" class="btn btn-primary px-4" style="border-radius:0;"><i class="bi bi-search ms-1"></i> بحث</button>
                 </div>
             </div>
         </form>
