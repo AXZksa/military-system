@@ -2,11 +2,11 @@
 {% block title %}الرئيسية{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-    <div class="avatar-lg" style="width:64px;height:64px;background:var(--green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--green-primary);flex-shrink:0;">
+    <div class="avatar-lg" style="width:64px;height:64px;background:linear-gradient(135deg,var(--accent-green-dim),var(--accent-cyan-dim));border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--accent-green);flex-shrink:0;">
         {% if session.user_avatar %}
         <img src="{{ session.user_avatar }}" loading="lazy" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
         {% else %}
-        <i class="bi bi-person fs-2" style="color:var(--green-primary);"></i>
+        <i class="bi bi-person fs-2" style="color:var(--accent-green);"></i>
         {% endif %}
     </div>
     <div>
@@ -19,7 +19,7 @@
     <div class="col-6">
         <div class="stat-card stat-card-green">
             <div class="card-body text-center py-3">
-                <i class="bi bi-check-circle fs-1 d-block mb-1" style="color:var(--green-primary);"></i>
+                <i class="bi bi-check-circle fs-1 d-block mb-1" style="color:var(--accent-green);"></i>
                 <h6>حضور اليوم</h6>
                 <h2 style="font-size:1.6rem;">
                     {% if attendance and attendance|length > 0 %}
@@ -34,7 +34,7 @@
     <div class="col-6">
         <div class="stat-card stat-card-blue">
             <div class="card-body text-center py-3">
-                <i class="bi bi-airplane fs-1 d-block mb-1" style="color:var(--gold);"></i>
+                <i class="bi bi-airplane fs-1 d-block mb-1" style="color:var(--accent-blue);"></i>
                 <h6>الرخصة</h6>
                 <h2 style="font-size:1.6rem;">
                     {% if lv %}
@@ -51,7 +51,7 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-clock-history ms-2" style="color:var(--green-primary);"></i>حركة اليوم</div>
+            <div class="card-header"><i class="bi bi-clock-history ms-2" style="color:var(--accent-cyan);"></i>حركة اليوم</div>
             <div class="card-body">
                 {% if attendance %}
                 <div class="timeline">
@@ -79,7 +79,7 @@
     <div class="col-md-6">
         <div class="card h-100">
             {% if lv %}
-            <div class="card-header" style="border-color:var(--gold);"><i class="bi bi-airplane ms-2" style="color:var(--gold);"></i>الرخصة</div>
+            <div class="card-header" style="border-color:var(--accent-blue);"><i class="bi bi-airplane ms-2" style="color:var(--accent-blue);"></i>الرخصة</div>
             <div class="card-body text-center py-4">
                 <i class="bi bi-check-circle text-info fs-1 mb-2 d-block"></i>
                 <h5 class="fw-bold text-info"><i class="bi bi-check-circle ms-1"></i> مرخوص</h5>
@@ -88,7 +88,7 @@
                 <p class="text-muted small">إلى: {{ lv.end[:16] }}</p>
             </div>
             {% else %}
-            <div class="card-header"><i class="bi bi-airplane ms-2" style="color:var(--green-primary);"></i>الرخصة</div>
+            <div class="card-header"><i class="bi bi-airplane ms-2" style="color:var(--accent-cyan);"></i>الرخصة</div>
             <div class="card-body text-center py-4">
                 <i class="bi bi-x-circle text-muted fs-1 mb-2 d-block"></i>
                 <p class="text-muted">غير مرخوص</p>
@@ -104,10 +104,10 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-megaphone ms-2" style="color:var(--gold);"></i>آخر تعميم</div>
+            <div class="card-header"><i class="bi bi-megaphone ms-2" style="color:var(--accent-gold);"></i>آخر تعميم</div>
             <div class="card-body">
                 {% if circular %}
-                <div style="background:var(--gold-dim);border-radius:var(--radius);padding:16px;border:1px solid var(--border);">
+                <div style="background:var(--accent-gold-dim);border-radius:var(--radius);padding:16px;border:1px solid var(--border);">
                     <p class="mb-1 fw-semibold">{{ circular[0] }}</p>
                     <small class="text-muted">{{ circular[1] }}</small>
                 </div>
@@ -122,7 +122,7 @@
     </div>
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-link-45deg ms-2" style="color:var(--green-primary);"></i>الوصول السريع</div>
+            <div class="card-header"><i class="bi bi-link-45deg ms-2" style="color:var(--accent-purple);"></i>الوصول السريع</div>
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <a href="{{ url_for('employee_attendance') }}" class="btn btn-success rounded-pill py-2 fw-bold">

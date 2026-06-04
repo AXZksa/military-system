@@ -24,28 +24,26 @@
     <div id="nprogress-bar"></div>
     <script>window.addEventListener('load',function(){var l=document.getElementById('pageLoader');if(l)setTimeout(function(){l.classList.add('hidden');setTimeout(function(){if(l.parentNode)l.remove();},400);},200);});</script>
     {% if session.user_id %}
-    <nav class="topbar">
+    <nav class="navbar topbar">
         <div class="container-fluid px-3">
-            <div class="topbar-section">
-                <button class="btn-icon" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
-                    <i class="bi bi-list fs-5"></i>
-                </button>
-                <a class="navbar-brand" href="{{ url_for('index') }}">
-                    <i class="bi bi-shield-fill-check"></i>
-                    <span>نظام توثيق الحركة</span>
-                </a>
-            </div>
-            <div class="topbar-section">
+            <button class="btn-icon" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-fill-check"></i>
+                <span>نظام توثيق الحركة</span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
                 <div class="live-clock d-none d-md-flex" id="liveClock">
                     <span class="clock-time" id="clockTime">00:00</span>
                     <span class="clock-date" id="clockDate">---</span>
                 </div>
-                <span class="d-none d-md-inline fw-semibold" style="color:rgba(255,255,255,.85);font-size:13px;">{{ session.full_name }}</span>
+                <span class="text-secondary small d-none d-md-inline fw-semibold">{{ session.full_name }}</span>
                 <button class="btn-icon" id="themeToggle" title="تبديل السمة">
                     <i class="bi bi-moon-stars"></i>
                 </button>
-                <a href="{{ url_for('logout') }}" class="topbar-link" onclick="return confirm('تسجيل خروج؟')">
-                    <i class="bi bi-box-arrow-left ms-1"></i> خروج
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-primary btn-sm px-3" onclick="return confirm('تسجيل خروج؟')">
+                    <i class="bi bi-box-arrow-left"></i>
                 </a>
             </div>
         </div>
@@ -54,7 +52,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h5><i class="bi bi-shield-fill-check ms-1"></i>القائمة الرئيسية</h5>
-            <button type="button" class="btn-close" id="sidebarClose" aria-label="إغلاق"></button>
+            <button type="button" class="btn-close" id="sidebarClose"></button>
         </div>
         <div class="sidebar-body">
             <div class="sidebar-user-card">
