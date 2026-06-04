@@ -854,16 +854,12 @@ def handle_attendance(action):
         if not data:
             log_attendance_error(user_id, 'بيانات JSON فارغة', None, None)
             return jsonify({'ok': False, 'msg': 'بيانات غير صالحة (تأكد من إرسال JSON صحيح)'}), 400
-    lat = data.get('latitude')
-    lng = data.get('longitude')
-    if lat is None or lng is None or (lat == 0 and lng == 0):
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+        if lat is None or lng is None or (lat == 0 and lng == 0):
             log_attendance_error(user_id, 'إحداثيات GPS مفقودة', lat, lng)
             return jsonify({'ok': False, 'msg': 'الرجاء مشاركة الموقع (تأكد من تفعيل GPS)'}), 400
-        try:
-            dist = geodesic(FACILITY_LOCATION, (float(lat), float(lng))).meters
-        except Exception as geo_err:
-            log_attendance_error(user_id, f'خطأ في حساب المسافة: {geo_err}', lat, lng)
-            return jsonify({'ok': False, 'msg': f'خطأ في حساب موقعك. حاول مرة أخرى.'}), 500
+        dist = geodesic(FACILITY_LOCATION, (float(lat), float(lng))).meters
         if dist > ALLOWED_RADIUS:
             return jsonify({'ok': False, 'msg': f'أنت خارج النطاق المسموح. مسافتك: {dist:.0f}م (الحد: {ALLOWED_RADIUS}م)'}), 400
         note = data.get('note', '')
@@ -874,6 +870,9 @@ def handle_attendance(action):
         if os.getenv('GH_TOKEN'): threading.Thread(target=backup.do_backup, daemon=True).start()
         verb = "تم تسجيل الحضور ✅" if action == 'check_in' else "تم تسجيل الانصراف 🔴"
         return jsonify({'ok': True, 'msg': f'{verb}\nالمسافة: {dist:.0f}م'})
+    except json.JSONDecodeError:
+        log_attendance_error(user_id, 'JSON غير صالح', None, None)
+        return jsonify({'ok': False, 'msg': 'بيانات غير صالحة (تأكد من إرسال JSON صحيح)'}), 400
     except Exception as e:
         log_attendance_error(user_id, f'خطأ غير متوقع: {str(e)[:200]}', None, None)
         return jsonify({'ok': False, 'msg': f'حدث خطأ في الخادم: {str(e)[:100]}. حاول مرة أخرى أو تواصل مع الإدارة.'}), 500
