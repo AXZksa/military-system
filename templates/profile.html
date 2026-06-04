@@ -10,10 +10,10 @@
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         {% if user.avatar %}
-                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" loading="lazy" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;">
+                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" loading="lazy" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--green-primary) !important;">
                         {% else %}
-                        <div id="avatarPlaceholder" style="width:120px;height:120px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--accent-green);">
-                            <i class="bi bi-person fs-1" style="color:var(--accent-green);"></i>
+                        <div id="avatarPlaceholder" style="width:120px;height:120px;background:var(--green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--green-primary);">
+                            <i class="bi bi-person fs-1" style="color:var(--green-primary);"></i>
                         </div>
                         {% endif %}
                     </div>
@@ -39,7 +39,7 @@ function previewAvatar(e) {
         if (!img.id) {
             img.id = 'avatarPreview';
             img.className = 'rounded-circle border border-2';
-            img.style.cssText = 'width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;';
+            img.style.cssText = 'width:120px;height:120px;object-fit:cover;border-color:var(--green-primary) !important;';
             const placeholder = document.getElementById('avatarPlaceholder');
             if (placeholder) placeholder.replaceWith(img);
             else document.querySelector('.mb-4').appendChild(img);
