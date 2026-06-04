@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark" style="background:#0a1a12;">
+<html lang="ar" dir="rtl" data-theme="light" style="background:#f4f3ef;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#004d26">
+<meta name="color-scheme" content="light dark">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -18,8 +19,9 @@
 </head>
 <body>
     <div class="page-loader" id="pageLoader">
-        <div class="loader-ring"></div>
-        <small style="color:var(--text-muted);font-size:13px;">المنظومة الحكومية — جاري التحميل...</small>
+        <div class="loader-shield"><i class="bi bi-shield-fill-check"></i></div>
+        <div class="loader-bar"></div>
+        <div class="loader-text">المنظومة الحكومية — جاري التحميل...</div>
     </div>
     <div id="nprogress-bar"></div>
     <script>window.addEventListener('load',function(){var l=document.getElementById('pageLoader');if(l)setTimeout(function(){l.classList.add('hidden')},200);});</script>
