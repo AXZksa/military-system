@@ -22,7 +22,7 @@
         <small class="text-muted">جاري التحميل...</small>
     </div>
     <div id="nprogress-bar"></div>
-    <script>window.addEventListener('load',function(){var l=document.getElementById('pageLoader');if(l)setTimeout(function(){l.classList.add('hidden');setTimeout(function(){if(l.parentNode)l.remove();},400);},200);});</script>
+    <script>window.addEventListener('load',function(){var l=document.getElementById('pageLoader');if(l)setTimeout(function(){l.classList.add('hidden')},200);});</script>
     {% if session.user_id %}
     <nav class="navbar topbar">
         <div class="container-fluid px-3">
@@ -58,7 +58,7 @@
             <div class="sidebar-user-card">
                 <a href="{{ url_for('profile') }}" class="avatar-link">
                     {% if session.user_avatar %}
-                    <img src="{{ session.user_avatar }}" class="avatar" loading="lazy">
+                    <img src="{{ session.user_avatar }}" class="avatar">
                     {% else %}
                     <div class="avatar"><i class="bi bi-person"></i></div>
                     {% endif %}
@@ -255,12 +255,13 @@
     (function() {
         var bar = document.getElementById('nprogress-bar');
         if (!bar) return;
-        var links = document.querySelectorAll('a:not([target="_blank"]):not([href^="#"]):not([href^="javascript"]):not([download]):not([data-bs-toggle])');
+        var links = document.querySelectorAll('a:not([target="_blank"]):not([href^="#"]):not([href^="javascript"]):not([download])');
         for (var i = 0; i < links.length; i++) {
             (function(l) {
                 l.addEventListener('click', function(e) {
                     var href = l.getAttribute('href');
-                    if (!href || href === '' || href.startsWith('http') || l.dataset.bsToggle) return;
+                    if (!href || href === '' || href.startsWith('http')) return;
+                    if (l.getAttribute('data-bs-toggle') || l.dataset.bsToggle) return;
                     bar.classList.add('loading');
                     bar.classList.remove('done');
                 });
@@ -296,34 +297,26 @@
         var overlay = document.getElementById('sidebarOverlay');
         var toggleBtn = document.getElementById('sidebarToggle');
         var closeBtn = document.getElementById('sidebarClose');
-        var mainContent = document.getElementById('mainContent');
         if (!sidebar || !toggleBtn) return;
         function isDesktop() { return window.innerWidth >= 992; }
         function openSidebar() {
             sidebar.classList.add('open');
-            if (mainContent) mainContent.classList.remove('sidebar-collapsed');
             if (!isDesktop()) overlay.classList.add('show');
         }
         function closeSidebar() {
             sidebar.classList.remove('open');
             overlay.classList.remove('show');
-            if (isDesktop() && mainContent) mainContent.classList.add('sidebar-collapsed');
         }
         toggleBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
-                if (isDesktop()) localStorage.setItem('sidebar_closed', '1');
-            } else {
-                openSidebar();
-                localStorage.removeItem('sidebar_closed');
-            }
+            if (sidebar.classList.contains('open')) closeSidebar();
+            else openSidebar();
         });
         if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
-        if (isDesktop() && !localStorage.getItem('sidebar_closed')) sidebar.classList.add('open');
+        if (isDesktop()) sidebar.classList.add('open');
         window.addEventListener('resize', function() {
-            if (isDesktop()) { overlay.classList.remove('show'); }
+            if (isDesktop()) { sidebar.classList.add('open'); overlay.classList.remove('show'); }
             else { sidebar.classList.remove('open'); }
         });
         document.addEventListener('keydown', function(e) {

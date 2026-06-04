@@ -4,11 +4,7 @@
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0"><i class="bi bi-file-text ms-2"></i>التقارير</h4>
-    <div class="d-flex gap-2 align-items-center">
-        <form method="GET" action="{{ url_for('admin_report_date', date_str='') }}" class="d-flex align-items-center gap-1" id="datePickerForm" onsubmit="return goToDate()">
-            <input type="date" id="reportDatePicker" class="form-control form-control-sm" style="max-width:150px;" value="{{ dt }}">
-            <button type="submit" class="btn btn-outline-primary rounded-pill btn-sm px-2"><i class="bi bi-search"></i></button>
-        </form>
+    <div class="d-flex gap-2">
         <button class="btn btn-outline-primary rounded-pill btn-sm px-3" onclick="window.print()">
             <i class="bi bi-printer ms-1"></i> طباعة
         </button>
@@ -22,15 +18,6 @@
         {% endif %}
     </div>
 </div>
-<script>
-function goToDate() {
-    var d = document.getElementById('reportDatePicker');
-    if (d && d.value) {
-        window.location.href = '{{ url_for("admin_reports") }}' + d.value;
-    }
-    return false;
-}
-</script>
 
 <div class="card mb-4" id="reportCard">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -69,5 +56,19 @@ function goToDate() {
 {% endblock %}
 
 {% block scripts %}
-
+<style>
+@media print {
+    body { background: #fff !important; }
+    .topbar, .sidebar, .sidebar-overlay, .btn, .card-header .d-flex.gap-2,
+    .card:last-child, .alert { display: none !important; }
+    .main-content { margin: 0 !important; padding: 0 !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .card-header .badge { display: none !important; }
+    .table th { color: #000 !important; }
+    .table td { color: #000 !important; }
+    .table-warning-row td { color: #856404 !important; }
+    .table-danger-row td { color: #721c24 !important; }
+    .table-info-row td { color: #0c5460 !important; }
+}
+</style>
 {% endblock %}

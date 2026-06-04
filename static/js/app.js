@@ -16,15 +16,16 @@ function showToast(msg, type) {
     if (!c) {
         c = document.createElement('div');
         c.id = 'toastContainer';
+        c.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;width:auto;max-width:90%;';
         document.body.appendChild(c);
     }
     var t = document.createElement('div');
-    t.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show d-flex align-items-center gap-2';
+    t.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show shadow-lg d-flex align-items-center gap-2';
     var icon = 'info-circle';
     if (type === 'success') icon = 'check-circle';
     else if (type === 'danger') icon = 'x-circle';
     else if (type === 'warning') icon = 'exclamation-triangle';
-    t.innerHTML = '<i class="bi bi-' + icon + ' fs-5"></i><span>' + msg + '</span><button type="button" class="btn-close me-auto" data-bs-dismiss="alert" aria-label="إغلاق"></button>';
+    t.innerHTML = '<i class="bi bi-' + icon + ' fs-5"></i><span>' + msg + '</span><button type="button" class="btn-close me-auto" data-bs-dismiss="alert"></button>';
     c.appendChild(t);
     setTimeout(function() { if (t.parentNode) t.remove(); }, 5000);
 }

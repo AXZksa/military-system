@@ -10,7 +10,7 @@
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         {% if user.avatar %}
-                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" loading="lazy" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;">
+                        <img src="{{ user.avatar }}" alt="الصورة الشخصية" id="avatarPreview" class="rounded-circle border border-2" style="width:120px;height:120px;object-fit:cover;border-color:var(--accent-green) !important;">
                         {% else %}
                         <div id="avatarPlaceholder" style="width:120px;height:120px;background:var(--accent-green-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:2px solid var(--accent-green);">
                             <i class="bi bi-person fs-1" style="color:var(--accent-green);"></i>

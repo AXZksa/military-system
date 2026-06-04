@@ -9,7 +9,7 @@
             <div class="card-header"><span><i class="bi bi-megaphone ms-2"></i>التعميم الحالي</span></div>
             <div class="card-body">
                 {% if circular %}
-                <div class="border-start border-4 px-3 py-2 rounded-2" style="border-color: var(--accent-warning) !important; background: var(--bg-tertiary);">
+                <div class="border-start border-4 border-gold px-3 py-2 bg-light rounded-2">
                     <p class="mb-1 fs-5">{{ circular[0] }}</p>
                     <small class="text-muted">صدر بتاريخ: {{ circular[1] }}</small>
                 </div>
@@ -42,5 +42,5 @@
         </div>
     </div>
 </div>
-
+<style>.border-gold { border-color: var(--gold) !important; }</style>
 {% endblock %}
