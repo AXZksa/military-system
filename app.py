@@ -21,6 +21,16 @@ def add_security_headers(resp):
     resp.headers['X-XSS-Protection'] = '1; mode=block'
     resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     resp.headers['Permissions-Policy'] = 'geolocation=(self), camera=(), microphone=()'
+    resp.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "frame-src 'none'; "
+        "object-src 'none'"
+    )
     if request.is_secure:
         resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     if resp.status_code == 200 and 'text/html' in resp.content_type and request.path.startswith(('/admin/', '/employee/')):

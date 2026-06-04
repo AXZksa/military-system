@@ -35,10 +35,9 @@
                 <thead class="table-dark">
                     <tr>
                         <th>المستخدم</th>
-                        <th>الجهاز</th>
                         <th>المتصفح</th>
                         <th>نظام التشغيل</th>
-                        <th>نوع الجهاز</th>
+                        <th>الجهاز</th>
                         <th>IP</th>
                         <th>تاريخ الدخول</th>
                         <th>آخر نشاط</th>
@@ -50,10 +49,9 @@
                     {% for s in sessions %}
                     <tr class="{% if not s.is_active %}text-muted{% endif %}">
                         <td class="fw-semibold">{{ s.rank_title ~ ' / ' if s.rank_title }}{{ s.full_name }}</td>
-                        <td><code>{{ s.device_type or '—' }}</code></td>
                         <td>{{ s.browser or '—' }}</td>
                         <td>{{ s.os or '—' }}</td>
-                        <td>{{ s.device_type or '—' }}</td>
+                        <td><code>{{ s.device_type or '—' }}</code></td>
                         <td><small>{{ s.ip_address or '—' }}</small></td>
                         <td><small class="text-muted">{{ s.created_at }}</small></td>
                         <td><small class="text-muted">{{ s.last_activity }}</small></td>
@@ -76,7 +74,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="10" class="text-center text-muted py-4">لا توجد جلسات</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-4">لا توجد جلسات</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
