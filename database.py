@@ -395,6 +395,7 @@ def init_settings():
     db_run("INSERT INTO system_settings (key,value) VALUES ('system_locked','0') ON CONFLICT(key) DO NOTHING")
     db_run("INSERT INTO system_settings (key,value) VALUES ('db_version','3') ON CONFLICT(key) DO NOTHING")
     db_run("INSERT INTO system_settings (key,value) VALUES ('allow_multi_session','0') ON CONFLICT(key) DO NOTHING")
+    db_run("INSERT INTO system_settings (key,value) VALUES ('device_limit','5') ON CONFLICT(key) DO NOTHING")
 
 # ────────────────────────────────────────────────
 #  Leaves

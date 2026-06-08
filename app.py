@@ -177,9 +177,10 @@ def login():
         if user['device_uid']:
             stored_tokens = [d.strip() for d in user['device_uid'].split(',') if d.strip()]
             if device_token not in stored_tokens:
-                if len(stored_tokens) >= 2:
+                device_limit = int(get_setting('device_limit', '5'))
+                if len(stored_tokens) >= device_limit:
                     session.clear()
-                    flash('تم تجاوز الحد المسموح به من الأجهزة (جهازان كحد أقصى). للدعم تواصل مع الإدارة.', 'danger')
+                    flash(f'تم تجاوز الحد المسموح به من الأجهزة ({device_limit} أجهزة كحد أقصى). للدعم تواصل مع الإدارة.', 'danger')
                     return render_template('login.html')
                 stored_tokens.append(device_token)
                 db_run("UPDATE users SET device_uid=? WHERE id=?", (','.join(stored_tokens), user['id']))
@@ -757,7 +758,8 @@ def admin_send_message():
 def admin_sessions():
     all_sessions = get_all_sessions()
     allow_multi = get_setting('allow_multi_session', '0') == '1'
-    return render_template('admin/sessions.html', sessions=all_sessions, allow_multi=allow_multi)
+    device_limit = get_setting('device_limit', '5')
+    return render_template('admin/sessions.html', sessions=all_sessions, allow_multi=allow_multi, device_limit=device_limit)
 
 @app.route('/admin/session/<session_id>/terminate', methods=['POST'])
 @admin_required
@@ -804,6 +806,22 @@ def admin_toggle_multi_session():
     set_setting('allow_multi_session', new_val)
     log_action(session['user_id'], 'toggle_multi_session', None, f'تعدد الجلسات: {"مسموح" if new_val=="1" else "ممنوع"}')
     flash('تم ' + ('السماح' if new_val=='1' else 'منع') + ' بتعدد الجلسات', 'success')
+    return redirect(url_for('admin_sessions'))
+
+@app.route('/admin/set-device-limit', methods=['POST'])
+@admin_required
+def admin_set_device_limit():
+    if request.form.get('_csrf', '') != session.get('csrf_token', ''):
+        flash('خطأ في التحقق', 'danger'); return redirect(url_for('admin_sessions'))
+    try:
+        new_limit = int(request.form.get('device_limit', '5'))
+        if new_limit < 1: new_limit = 1
+        if new_limit > 20: new_limit = 20
+    except:
+        new_limit = 5
+    set_setting('device_limit', str(new_limit))
+    log_action(session['user_id'], 'set_device_limit', None, f'تغيير حد الأجهزة إلى {new_limit}')
+    flash(f'تم تغيير الحد الأقصى للأجهزة لكل مستخدم إلى {new_limit}', 'success')
     return redirect(url_for('admin_sessions'))
 
 @app.route('/admin/attendance-errors')

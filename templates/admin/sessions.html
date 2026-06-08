@@ -8,7 +8,7 @@
         <span><i class="bi bi-sliders ms-2"></i>إعدادات الجلسات</span>
     </div>
     <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
             <div>
                 <h6 class="mb-1">السماح بتعدد الجلسات</h6>
                 <small class="text-muted">السماح للمستخدم بالدخول من أكثر من جهاز في نفس الوقت</small>
@@ -18,6 +18,20 @@
                 <button class="btn {% if allow_multi %}btn-success{% else %}btn-danger{% endif %} rounded-pill px-4">
                     <i class="bi {% if allow_multi %}bi-check-circle{% else %}bi-x-circle{% endif %} ms-1"></i>
                     {{ 'مسموح' if allow_multi else 'ممنوع' }}
+                </button>
+            </form>
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h6 class="mb-1">الحد الأقصى للأجهزة لكل مستخدم</h6>
+                <small class="text-muted">عدد الأجهزة المسموح بها لكل مستخدم (1-20)</small>
+            </div>
+            <form method="POST" action="{{ url_for('admin_set_device_limit') }}" class="d-flex align-items-center gap-2 m-0">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <input type="number" name="device_limit" value="{{ device_limit }}" min="1" max="20"
+                       class="form-control form-control-sm" style="width:70px">
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                    <i class="bi bi-check-lg"></i> حفظ
                 </button>
             </form>
         </div>
